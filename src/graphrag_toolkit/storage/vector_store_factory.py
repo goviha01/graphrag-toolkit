@@ -25,6 +25,10 @@ class VectorStoreFactory():
         return VectorStore([VectorIndexFactory.for_neptune_analytics(index_name, graph_id, embed_model=embed_model, **kwargs) for index_name in index_names])
         
     @staticmethod
+    def for_postgres(connection_string, embed_model=None, index_names=DEFAULT_EMBEDDING_INDEXES, **kwargs):
+        return VectorStore([VectorIndexFactory.for_postgres(index_name, connection_string, embed_model=embed_model, **kwargs) for index_name in index_names])
+        
+    @staticmethod
     def for_dummy_vector_index(index_names=DEFAULT_EMBEDDING_INDEXES):
         return VectorStore([VectorIndexFactory.for_dummy_vector_index(index_name) for index_name in index_names])
     
