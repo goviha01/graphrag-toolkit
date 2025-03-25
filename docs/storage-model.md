@@ -121,6 +121,27 @@ neptune_connection_info = 'neptune-graph://g-jbzzaqb209'
 vector_store = VectorStoreFactory.for_vector_store(neptune_connection_info)
 ```
 
+#### PostgreSQL vector store
+
+You can use the `VectorStoreFactory.for_vector_store()` or `VectorStoreFactory.for_postgres()` static factory method to create an instance of a PostgreSQL vector store.
+
+To create a PostgreSQL vector store, supply a connection string that begins with `postgres://`, followed by the PostgreSQL connection details:
+
+```python
+from graphrag_toolkit.storage import VectorStoreFactory
+from graphrag_toolkit.storage.constants import POSTGRES_VECTOR
+
+# Using for_vector_store method
+postgres_connection_info = f"{POSTGRES_VECTOR}postgresql://username:password@hostname:port/database"
+vector_store = VectorStoreFactory.for_vector_store(postgres_connection_info)
+
+# Or using the dedicated method
+vector_store = VectorStoreFactory.for_postgres(
+    connection_string="postgresql://username:password@hostname:port/database",
+    index_names=["chunk", "statement"]
+)
+```
+
 By default, the `VectorStoreFactory` will enable both the statement index and the chunk index. If you want to enable just one of the indexes, pass an `index_names` argument to the factory method:
 
 ```
