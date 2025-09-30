@@ -269,6 +269,7 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
         )
 
         self.context_format = kwargs.get('context_format', 'json')
+        self.verbose = kwargs.pop('verbose', True)
         
         no_cache = kwargs.pop('no_cache', False)
         enable_cache = False if no_cache else GraphRAGConfig.enable_cache
@@ -337,7 +338,8 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
                 prompt=self.chat_template,
                 query=query_bundle.query_str,
                 search_results=search_results,
-                additionalContext='\n'.join(additional_context)
+                additionalContext='\n'.join(additional_context),
+                answer_mode='fully' if self.verbose else 'concisely'
             )
             return response
         except Exception:
@@ -364,27 +366,25 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
             raise
 
     def _format_as_text(self, json_results):
-        """
-        Formats the given JSON results into a text representation with specific formatting. Each item in the JSON
-        results is processed to include its topic, associated statements, and source. The output is a concatenation
-        of these formatted components.
 
-        Args:
-            json_results (list[dict]): A list of dictionaries where each dictionary represents a result.
-                Each dictionary must contain the following keys:
-                - topic (str): The topic of the result.
-                - statements (list[str]): A list of statements related to the topic.
-                - source (str): The source where the result originated from.
+        def topic_as_text(topic, source):
+            topic_lines = []
+            topic_lines.append(f"""## {topic['topic']}""")
+            topic_lines.append(' '.join([s for s in topic['statements']]))
+            topic_lines.append(f"""[Source: {source}]""")
+            topic_lines.append('\n')
+            return topic_lines
 
-        Returns:
-            str: A string representation of the formatted results, including the topics, statements, and sources.
-        """
         lines = []
+
         for json_result in json_results:
-            lines.append(f"""## {json_result['topic']}""")
-            lines.append(' '.join([s for s in json_result['statements']]))
-            lines.append(f"""[Source: {json_result['source']}]""")
-            lines.append('\n')
+            source = json_result['source']
+            if 'topics' in json_result:
+                for topic in json_result['topics']:
+                    lines.extend(topic_as_text(topic, source))
+            else:
+                lines.extend(topic_as_text(json_result, source))
+
         return '\n'.join(lines)
 
     def _format_context(self, search_results: List[NodeWithScore], context_format: str = 'json'):
@@ -461,7 +461,7 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
             results = post_processor.postprocess_nodes(results, query_bundle)
 
         return results
-    
+     
     def _query(self, query_bundle: QueryBundle) -> RESPONSE_TYPE:
         """
         Executes a query against the system and processes the results to generate a

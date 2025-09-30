@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
+import time
 from typing import List, Any, Optional
 
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig
@@ -33,17 +34,22 @@ class ChunkCosineSimilaritySearch(SemanticGuidedBaseChunkRetriever):
 
     def _retrieve(self, query_bundle: QueryBundle) -> List[NodeWithScore]:
 
+        start = time.time()
+
         # 1. Get initial candidates from vector store via L2 Norm
         chunk_results = self.vector_store.get_index('chunk').top_k(
             query_bundle, 
             top_k=5,
             filter_config=self.filter_config
         )
+
+        end_initial = time.time()
+        initial_ms = (end_initial-start) * 1000
         
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results:
-            logger.debug(f'chunk_results: {chunk_results}')
+            logger.debug(f'chunk_results: {chunk_results} [{initial_ms:.2f}ms]')
         else:
-            logger.debug(f'num chunk_results: {len(chunk_results)}')
+            logger.debug(f'num chunk_results: {len(chunk_results)} [{initial_ms:.2f}ms]')
         
         # 2. Get chunk IDs and embeddings using shared cache
         chunk_ids = [r['chunk']['chunkId'] for r in chunk_results]
@@ -55,11 +61,14 @@ class ChunkCosineSimilaritySearch(SemanticGuidedBaseChunkRetriever):
             chunk_embeddings,
             self.top_k
         )
+
+        end_top_k = time.time()
+        top_k_ms = (end_top_k-end_initial) * 1000
         
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results:
-            logger.debug(f'top_k_chunks: {top_k_chunks}')
+            logger.debug(f'top_k_chunks: {top_k_chunks} [{top_k_ms:.2f}ms]')
         else:
-            logger.debug(f'num top_k_chunks: {len(top_k_chunks)}')
+            logger.debug(f'num top_k_chunks: {len(top_k_chunks)} [{top_k_ms:.2f}ms]')
 
         # 4. Create nodes with minimal data
         nodes = []
@@ -73,9 +82,12 @@ class ChunkCosineSimilaritySearch(SemanticGuidedBaseChunkRetriever):
             )
             nodes.append(NodeWithScore(node=node, score=score))
 
+        end_nodes = time.time()
+        nodes_ms = (end_nodes-end_top_k) * 1000
+
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results: 
-            logger.debug(f'nodes: {nodes}')
+            logger.debug(f'nodes: {nodes} [{nodes_ms:.2f}ms]')
         else:
-            logger.debug(f'num nodes: {len(nodes)}')
+            logger.debug(f'num nodes: {len(nodes)} [{nodes_ms:.2f}ms]')
 
         return nodes

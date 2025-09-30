@@ -60,8 +60,9 @@ class ProcessorArgs():
         self.derive_subqueries = kwargs.get('derive_subqueries', False)
         self.debug_results = kwargs.get('debug_results', [])
         self.reranker = kwargs.get('reranker', 'tfidf')
-        self.max_statements = kwargs.get('max_statements', 100)
-        self.max_search_results = kwargs.get('max_search_results', 10)
+        self.disaggregate_results = kwargs.get('disaggregate_results', False)
+        self.max_statements = kwargs.get('max_statements', 200)
+        self.max_search_results = kwargs.get('max_search_results', 5)
         self.max_statements_per_topic = kwargs.get('max_statements_per_topic', 10)
         self.max_keywords = kwargs.get('max_keywords', 3)
         self.max_subqueries = kwargs.get('max_subqueries', 2) 
@@ -83,6 +84,9 @@ class ProcessorArgs():
         self.ec_min_score_factor = kwargs.get('ec_min_score_factor', 0.1)
         self.ec_max_contexts = kwargs.get('ec_max_contexts', 3)
         self.ec_max_depth = kwargs.get('ec_max_depth', 3)
+        self.chunk_cosine_top_k = kwargs.get('chunk_cosine_top_k', 50)
+        self.chunk_beam_width = kwargs.get('chunk_beam_width', 10)
+        self.chunk_beam_max_depth = kwargs.get('chunk_beam_max_depth', 3)
         self.no_cache = kwargs.get('no_cache', None)
         
 

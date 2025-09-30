@@ -5,6 +5,7 @@ from typing import List, Set, Tuple, Optional, Any
 from queue import PriorityQueue
 import numpy as np
 import logging
+import time
 
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
@@ -55,10 +56,13 @@ class SemanticChunkBeamGraphSearch(SemanticGuidedBaseChunkRetriever):
         query_embedding: np.ndarray,
         start_chunk_ids: List[str]
     ) -> List[Tuple[str, List[str]]]:  # [(statement_id, path), ...]
-    
+        
         visited: Set[str] = set()
         results: List[Tuple[str, List[str]]] = []
         queue: PriorityQueue = PriorityQueue()
+
+        logger.debug(f'Beam search [beam_width: {self.beam_width}, max_depth: {self.max_depth}]')
+        logger.debug(f'Getting {len(start_chunk_ids)} top k chunk ids' )
 
         # Get initial embeddings and scores
         start_embeddings = self.embedding_cache.get_embeddings(start_chunk_ids)
@@ -71,8 +75,14 @@ class SemanticChunkBeamGraphSearch(SemanticGuidedBaseChunkRetriever):
         # Initialize queue with start chunks
         for similarity, chunk_id in start_scores:
             queue.put((-similarity, 0, chunk_id, [chunk_id]))
+            
+
+        iteration = 0
 
         while not queue.empty() and len(results) < self.beam_width:
+            
+            iteration += 1
+
             neg_score, depth, current_id, path = queue.get()
 
             if current_id in visited:
@@ -81,12 +91,16 @@ class SemanticChunkBeamGraphSearch(SemanticGuidedBaseChunkRetriever):
             visited.add(current_id)
             results.append((current_id, path))
 
+            added = 0
+
             if depth < self.max_depth:
                 neighbor_ids = self.get_neighbors(current_id)
                 
                 if neighbor_ids:
                     # Get embeddings for neighbors using shared cache
                     neighbor_embeddings = self.embedding_cache.get_embeddings(neighbor_ids)
+
+                    logger.debug(f'Getting {self.beam_width} top k chunk ids' )
                     
                     # Score neighbors
                     scored_neighbors = get_top_k(
@@ -99,13 +113,18 @@ class SemanticChunkBeamGraphSearch(SemanticGuidedBaseChunkRetriever):
                     for similarity, neighbor_id in scored_neighbors:
                         if neighbor_id not in visited:
                             new_path = path + [neighbor_id]
+                            added += 1
                             queue.put(
                                 (-similarity, depth + 1, neighbor_id, new_path)
                             )
 
+            logger.debug(f'iteration: {iteration}, added: {added}')
+
         return results
 
     def _retrieve(self, query_bundle: QueryBundle) -> List[NodeWithScore]:
+
+        start = time.time()
 
         # 1. Get initial nodes (either shared or fallback)
         initial_chunk_ids = []
@@ -125,10 +144,13 @@ class SemanticChunkBeamGraphSearch(SemanticGuidedBaseChunkRetriever):
                 r['chunk']['chunkId'] for r in results
             ]
 
+        end_initial = time.time()
+        initial_ms = (end_initial-start) * 1000
+
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results:    
-            logger.debug(f'initial_chunk_ids: {initial_chunk_ids}')
+            logger.debug(f'initial_chunk_ids: {initial_chunk_ids} [{initial_ms:.2f}ms]')
         else:
-            logger.debug(f'num initial_chunk_ids: {len(initial_chunk_ids)}')
+            logger.debug(f'num initial_chunk_ids: {len(initial_chunk_ids)} [{initial_ms:.2f}ms]')
         
 
         if not initial_chunk_ids:
@@ -139,11 +161,14 @@ class SemanticChunkBeamGraphSearch(SemanticGuidedBaseChunkRetriever):
             query_bundle.embedding,
             initial_chunk_ids
         )
+
+        end_beam = time.time()
+        beam_ms = (end_beam-end_initial) * 1000
         
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results:  
-            logger.debug(f'beam_results: {beam_results}')
+            logger.debug(f'beam_results: {beam_results} [{beam_ms:.2f}ms]')
         else:
-            logger.debug(f'num beam_results: {len(beam_results)}')
+            logger.debug(f'num beam_results: {len(beam_results)} [{beam_ms:.2f}ms]')
 
         # 3. Create nodes for new chunks only
         nodes = []
@@ -161,9 +186,12 @@ class SemanticChunkBeamGraphSearch(SemanticGuidedBaseChunkRetriever):
                 )
                 nodes.append(NodeWithScore(node=node, score=0.0))
 
+        end_nodes = time.time()
+        nodes_ms = (end_nodes-end_beam) * 1000
+
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results:      
-            logger.debug(f'nodes: {nodes}')
+            logger.debug(f'nodes: {nodes} [{nodes_ms:.2f}ms]')
         else:
-            logger.debug(f'num nodes: {len(nodes)}')
+            logger.debug(f'num nodes: {len(nodes)} [{nodes_ms:.2f}ms]')
 
         return nodes

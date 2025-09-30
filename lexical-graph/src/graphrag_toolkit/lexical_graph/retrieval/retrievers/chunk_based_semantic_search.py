@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
+import time
 import concurrent.futures
 from typing import List, Optional, Type, Union
 from itertools import repeat
@@ -56,14 +57,14 @@ class ChunkBasedSemanticSearch(TraversalBasedBaseRetriever):
             ChunkCosineSimilaritySearch(
                 vector_store=vector_store,
                 graph_store=graph_store,
-                top_k=self.args.vss_top_k,
+                top_k=self.args.chunk_cosine_top_k,
                 filter_config=filter_config
             ),
             SemanticChunkBeamGraphSearch(
                 vector_store=vector_store,
                 graph_store=graph_store,
-                max_depth=self.args.max_search_results,
-                beam_width=self.args.intermediate_limit,
+                max_depth=self.args.chunk_beam_max_depth,
+                beam_width=self.args.chunk_beam_width,
                 filter_config=filter_config
             )
         ]
@@ -112,6 +113,8 @@ class ChunkBasedSemanticSearch(TraversalBasedBaseRetriever):
 
     def get_start_node_ids(self, query_bundle: QueryBundle) -> List[str]:
 
+        start = time.time()
+
         logger.debug('Getting start node ids for chunk-based semantic search...')
 
         # 1. Get initial results in parallel
@@ -121,11 +124,14 @@ class ChunkBasedSemanticSearch(TraversalBasedBaseRetriever):
                 self.initial_retrievers, 
                 repeat(query_bundle)
             ))
+
+        end_initial = time.time()
+        initial_ms = (end_initial-start) * 1000
         
         if logger.isEnabledFor(logging.DEBUG) and self.args.debug_results:
-            logger.debug(f'initial_results: {initial_results}')
+            logger.debug(f'initial_results: {initial_results} [{initial_ms:.2f}ms]')
         else:
-            logger.debug(f'num initial_results: {len(initial_results)}')
+            logger.debug(f'num initial_results: {len(initial_results)} [{initial_ms:.2f}ms]')
 
         # 2. Collect unique initial nodes
         seen_chunk_ids = set()
@@ -139,10 +145,13 @@ class ChunkBasedSemanticSearch(TraversalBasedBaseRetriever):
 
         all_nodes = initial_nodes.copy()
 
+        end_collect = time.time()
+        collect_ms = (end_collect-end_initial) * 1000
+
         if logger.isEnabledFor(logging.DEBUG) and self.args.debug_results:
-            logger.debug(f'all_nodes (before expansion): {all_nodes}')
+            logger.debug(f'all_nodes (before expansion): {all_nodes} [{collect_ms:.2f}ms]')
         else:
-            logger.debug(f'num all_nodes (before expansion): {len(all_nodes)}')
+            logger.debug(f'num all_nodes (before expansion): {len(all_nodes)} [{collect_ms:.2f}ms]')
 
         # 3. Graph expansion if enabled
         if self.share_results and initial_nodes:
@@ -159,10 +168,13 @@ class ChunkBasedSemanticSearch(TraversalBasedBaseRetriever):
                     logger.error(f"Error in graph retriever {retriever.__class__.__name__}: {e}")
                     continue
 
+        end_expansion = time.time()
+        expansion_ms = (end_expansion-end_collect) * 1000
+       
         if logger.isEnabledFor(logging.DEBUG) and self.args.debug_results:            
-            logger.debug(f'all_nodes (after expansion): {all_nodes}')
+            logger.debug(f'all_nodes (after expansion): {all_nodes} [{expansion_ms:.2f}ms]')
         else:
-            logger.debug(f'num all_nodes (after expansion): {len(all_nodes)}')
+            logger.debug(f'num all_nodes (after expansion): {len(all_nodes)} [{expansion_ms:.2f}ms]')
 
         # 4. Fetch statements once
         if not all_nodes:

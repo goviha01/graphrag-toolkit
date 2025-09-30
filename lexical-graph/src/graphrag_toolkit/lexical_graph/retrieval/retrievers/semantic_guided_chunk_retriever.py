@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 import concurrent.futures
 import logging
+import time
 from collections import defaultdict
 from typing import List, Optional, Any, Union, Type
 from itertools import repeat
@@ -13,10 +14,8 @@ from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
 from graphrag_toolkit.lexical_graph.storage.vector import VectorStore
 
 from graphrag_toolkit.lexical_graph.retrieval.retrievers.semantic_guided_base_chunk_retriever import SemanticGuidedBaseChunkRetriever
-#from graphrag_toolkit.lexical_graph.retrieval.retrievers.keyword_ranking_search import KeywordRankingSearch
 from graphrag_toolkit.lexical_graph.retrieval.retrievers.chunk_cosine_search import ChunkCosineSimilaritySearch
 from graphrag_toolkit.lexical_graph.retrieval.retrievers.semantic_chunk_beam_search import SemanticChunkBeamGraphSearch
-#from graphrag_toolkit.lexical_graph.retrieval.retrievers.rerank_beam_search import RerankingBeamGraphSearch
 from graphrag_toolkit.lexical_graph.retrieval.utils.chunk_utils import get_chunks_query, SharedChunkEmbeddingCache
 
 logger = logging.getLogger(__name__)
@@ -79,6 +78,8 @@ class SemanticGuidedChunkRetriever(SemanticGuidedBaseChunkRetriever):
 
     def _retrieve(self, query_bundle: QueryBundle) -> List[NodeWithScore]:
 
+        start = time.time()
+
         # 1. Get initial results in parallel
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.initial_retrievers)) as p:
             initial_results = list(p.map(
@@ -86,11 +87,14 @@ class SemanticGuidedChunkRetriever(SemanticGuidedBaseChunkRetriever):
                 self.initial_retrievers, 
                 repeat(query_bundle)
             ))
+
+        end_initial = time.time()
+        initial_ms = (end_initial-start) * 1000
         
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results:
-            logger.debug(f'initial_results: {initial_results}')
+            logger.debug(f'initial_results: {initial_results} [{initial_ms:.2f}ms]')
         else:
-            logger.debug(f'num initial_results: {len(initial_results)}')
+            logger.debug(f'num initial_results: {len(initial_results)} [{initial_ms:.2f}ms]')
 
         # 2. Collect unique initial nodes
         seen_chunk_ids = set()
@@ -104,10 +108,13 @@ class SemanticGuidedChunkRetriever(SemanticGuidedBaseChunkRetriever):
 
         all_nodes = initial_nodes.copy()
 
+        end_collect = time.time()
+        collect_ms = (end_collect-end_initial) * 1000
+
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results:
-            logger.debug(f'all_nodes (before expansion): {all_nodes}')
+            logger.debug(f'all_nodes (before expansion): {all_nodes} [{collect_ms:.2f}ms]')
         else:
-            logger.debug(f'num all_nodes (before expansion): {len(all_nodes)}')
+            logger.debug(f'num all_nodes (before expansion): {len(all_nodes)} [{collect_ms:.2f}ms]')
 
         # 3. Graph expansion if enabled
         if self.share_results and initial_nodes:
@@ -124,10 +131,13 @@ class SemanticGuidedChunkRetriever(SemanticGuidedBaseChunkRetriever):
                     logger.error(f"Error in graph retriever {retriever.__class__.__name__}: {e}")
                     continue
 
+        end_expansion = time.time()
+        expansion_ms = (end_expansion-end_collect) * 1000
+
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results:            
-            logger.debug(f'all_nodes (after expansion): {all_nodes}')
+            logger.debug(f'all_nodes (after expansion): {all_nodes} [{expansion_ms:.2f}ms]')
         else:
-            logger.debug(f'num all_nodes (after expansion): {len(all_nodes)}')
+            logger.debug(f'num all_nodes (after expansion): {len(all_nodes)} [{expansion_ms:.2f}ms]')
 
         # 4. Fetch statements once
         if not all_nodes:
@@ -139,10 +149,13 @@ class SemanticGuidedChunkRetriever(SemanticGuidedBaseChunkRetriever):
         ]
         chunks = get_chunks_query(self.graph_store, chunk_ids)
 
+        end_chunks = time.time()
+        chunks_ms = (end_chunks-end_expansion) * 1000
+
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results:
-            logger.debug(f'chunks: {chunks}')
+            logger.debug(f'chunks: {chunks} [{chunks_ms:.2f}ms]')
         else:
-            logger.debug(f'num chunks: {len(chunks)}')
+            logger.debug(f'num chunks: {len(chunks)} [{chunks_ms:.2f}ms]')
         
 
         # 5. Create final nodes with full data
@@ -169,10 +182,13 @@ class SemanticGuidedChunkRetriever(SemanticGuidedBaseChunkRetriever):
                     score=node.score
                 ))
 
+        end_final = time.time()
+        final_ms = (end_final-end_chunks) * 1000
+
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results:       
-            logger.debug(f'final_nodes: {final_nodes}')
+            logger.debug(f'final_nodes: {final_nodes} [{final_ms:.2f}ms]')
         else:
-            logger.debug(f'num final_nodes: {len(final_nodes)}')
+            logger.debug(f'num final_nodes: {len(final_nodes)} [{final_ms:.2f}ms]')
 
         # 6. Apply metadata filters
         filtered_nodes = [
@@ -181,10 +197,13 @@ class SemanticGuidedChunkRetriever(SemanticGuidedBaseChunkRetriever):
             if self.filter_config.filter_source_metadata_dictionary(node.node.metadata['source']['metadata'])    
         ]
 
+        end_filter = time.time()
+        filter_ms = (end_filter-end_final) * 1000
+
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results:       
-            logger.debug(f'filter_nodes: {filtered_nodes}')
+            logger.debug(f'filter_nodes: {filtered_nodes} [{filter_ms:.2f}ms]')
         else:
-            logger.debug(f'num filter_nodes: {len(filtered_nodes)}')
+            logger.debug(f'num filter_nodes: {len(filtered_nodes)} [{filter_ms:.2f}ms]')
 
         # 7. Group by source for better context
         source_nodes = defaultdict(list)
@@ -198,9 +217,12 @@ class SemanticGuidedChunkRetriever(SemanticGuidedBaseChunkRetriever):
             nodes.sort(key=lambda x: x.score or 0.0, reverse=True)
             ordered_nodes.extend(nodes)
 
+        end_order = time.time()
+        order_ms = (end_order-end_filter) * 1000
+
         if logger.isEnabledFor(logging.DEBUG) and self.debug_results:    
-            logger.debug(f'ordered_nodes: {ordered_nodes}')
+            logger.debug(f'ordered_nodes: {ordered_nodes} [{order_ms:.2f}ms]')
         else:
-            logger.debug(f'num ordered_nodes: {len(ordered_nodes)}')
+            logger.debug(f'num ordered_nodes: {len(ordered_nodes)} [{order_ms:.2f}ms]')
 
         return ordered_nodes

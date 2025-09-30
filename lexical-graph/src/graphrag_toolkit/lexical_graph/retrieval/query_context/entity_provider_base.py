@@ -32,10 +32,13 @@ class EntityProviderBase():
         end = time.time()
         duration_ms = (end-start) * 1000
 
-        logger.debug(f"""[{type(self).__name__}] Entities ({duration_ms:.2f} ms): {[
-            entity.model_dump_json(exclude_unset=True, exclude_none=True, warnings=False) 
-            for entity in entities
-        ]}""")
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f"""[{type(self).__name__}] Entities ({duration_ms:.2f} ms): {[
+                entity.model_dump_json(exclude_unset=True, exclude_none=True, warnings=False) 
+                for entity in entities
+            ]}""")
+        else:
+            logger.debug(f"[{type(self).__name__}] Entities ({duration_ms:.2f} ms): {[f'{e.entity.value} ({e.entity.classification}) [{e.score}]' for e in entities]}")
 
         return entities[:self.args.ec_max_entities]
 

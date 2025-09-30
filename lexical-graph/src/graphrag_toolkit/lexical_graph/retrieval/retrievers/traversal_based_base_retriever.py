@@ -29,7 +29,6 @@ DEFAULT_PROCESSORS = [
     PruneStatements,
     RescoreResults,
     SortResults,
-    TruncateResults,
     TruncateStatements,
     ClearChunks,
     ClearScores
@@ -39,7 +38,8 @@ DEFAULT_FORMATTING_PROCESSORS = [
     StatementsToStrings,
     SimplifySingleTopicResults,
     FormatSources,
-    ClearTopicIds
+    ClearTopicIds,
+    TruncateResults
 ]
 
 class TraversalBasedBaseRetriever(BaseRetriever):
@@ -186,9 +186,9 @@ class TraversalBasedBaseRetriever(BaseRetriever):
 
         return statements_results
     
-    def _init_entity_contexts(self, query_bundle: QueryBundle) -> List[str]:
+    def _init(self, query_bundle: QueryBundle) -> List[str]:
 
-        if not self.entity_contexts.contexts:
+        if not self.entity_contexts.keywords:
 
             start = time.time()
 
@@ -245,7 +245,7 @@ class TraversalBasedBaseRetriever(BaseRetriever):
         
         start_retrieve = time.time()
 
-        self._init_entity_contexts(query_bundle)
+        self._init(query_bundle)
         
         start_node_ids = self.get_start_node_ids(query_bundle)
         search_results:SearchResultCollection = self.do_graph_search(query_bundle, start_node_ids)

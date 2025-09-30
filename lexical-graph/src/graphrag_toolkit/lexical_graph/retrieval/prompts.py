@@ -18,7 +18,7 @@ You are a question answering agent. I will provide you with a set of search resu
   - If the search results are empty, do not attempt to answer the question.
   - Do not speculate: answer based only on the evidence of the search results.
 
-Based on the search results and additional context, answer the following question as concisely as possible:
+Based on the search results and additional context, answer the following question as {answer_mode} as possible:
 """
 
 

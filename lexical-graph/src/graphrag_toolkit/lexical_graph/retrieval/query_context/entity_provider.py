@@ -30,7 +30,7 @@ class EntityProvider(EntityProviderBase):
             cypher = f"""
             // get entities for keywords
             MATCH (entity:`__Entity__`)-[r:`__SUBJECT__`|`__OBJECT__`]->()
-            WHERE entity.search_str = $keyword and entity.class STARTS WITH $classification
+            WHERE entity.search_str STARTS WITH $keyword and entity.class STARTS WITH $classification
             WITH entity, count(r) AS score ORDER BY score DESC
             RETURN {{
                 {node_result('entity', self.graph_store.node_id('entity.entityId'), properties=['value', 'class'])},
@@ -45,7 +45,7 @@ class EntityProvider(EntityProviderBase):
             cypher = f"""
             // get entities for keywords
             MATCH (entity:`__Entity__`)-[r:`__SUBJECT__`|`__OBJECT__`]->()
-            WHERE entity.search_str = $keyword
+            WHERE entity.search_str STARTS WITH $keyword
             AND entity.class <> '__Local_Entity__'
             WITH entity, count(r) AS score ORDER BY score DESC
             RETURN {{

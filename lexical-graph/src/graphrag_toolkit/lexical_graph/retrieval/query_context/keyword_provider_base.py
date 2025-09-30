@@ -27,6 +27,6 @@ class KeywordProviderBase():
         end = time.time()
         duration_ms = (end-start) * 1000
 
-        logger.debug(f'[{type(self).__name__}] Keywords: {keywords} ({duration_ms:.2f} ms)')
+        logger.debug(f'[{type(self).__name__}] Keywords ({duration_ms:.2f} ms): {keywords}')
 
         return keywords[:self.args.max_keywords]

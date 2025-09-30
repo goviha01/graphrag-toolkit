@@ -43,7 +43,7 @@ class InferClassifications(SourceDocParser, PreferredValuesProvider):
         description='Chunk splitter'
     )
 
-    llm: Optional[LLMCache] = Field(
+    llm:Optional[LLMCache] = Field(
         description='The LLM to use for extraction'
     )
 
@@ -63,6 +63,10 @@ class InferClassifications(SourceDocParser, PreferredValuesProvider):
         'Default classifications'
     )
 
+    replace_default_classifications:bool = Field(
+        'Replace default classifications with new classifications after each cycle'
+    )
+
     def __init__(self,
                  num_samples:Optional[int]=None, 
                  num_iterations:Optional[int]=None,
@@ -71,7 +75,8 @@ class InferClassifications(SourceDocParser, PreferredValuesProvider):
                  llm:Optional[LLMCacheType]=None,
                  prompt_template:Optional[str]=None,
                  rank_prompt_template:Optional[str]=None,
-                 default_classifications:Optional[List[str]]=DEFAULT_ENTITY_CLASSIFICATIONS
+                 default_classifications:Optional[List[str]]=DEFAULT_ENTITY_CLASSIFICATIONS,
+                 replace_default_classifications:Optional[bool]=False   
             ):
         
         super().__init__(
@@ -85,7 +90,8 @@ class InferClassifications(SourceDocParser, PreferredValuesProvider):
             ),
             prompt_template=prompt_template or DOMAIN_ENTITY_CLASSIFICATIONS_PROMPT,
             rank_prompt_template=rank_prompt_template or RANK_ENTITY_CLASSIFICATIONS_PROMPT,
-            default_classifications=[] if default_classifications is None else default_classifications
+            default_classifications=[] if default_classifications is None else default_classifications,
+            replace_default_classifications=replace_default_classifications
         )
 
         logger.debug(f'Prompt template: {self.prompt_template}')
@@ -159,6 +165,9 @@ class InferClassifications(SourceDocParser, PreferredValuesProvider):
         else:
             logger.warning(f'Domain adaptation failed, using default classifications: {self.default_classifications}')
             self.classifications = self.default_classifications
+
+        if self.replace_default_classifications:
+            self.default_classifications = self.classifications
 
         return nodes
     

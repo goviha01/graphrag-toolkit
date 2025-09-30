@@ -96,7 +96,8 @@ class EntityVSSProvider(EntityProviderBase):
         node_ids = self._get_node_ids(values)
         entities = self._get_entities_for_nodes(node_ids)
 
-        logger.debug(f'entities for values: [values: {values}, {self.index_name}_ids: {node_ids}, entities: {entities}]')
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f'entities for values: [values: {values}, {self.index_name}_ids: {node_ids}, entities: {entities}]')
 
         return entities
     

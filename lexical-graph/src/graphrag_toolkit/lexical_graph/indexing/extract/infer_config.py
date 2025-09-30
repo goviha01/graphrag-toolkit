@@ -32,3 +32,4 @@ class InferClassificationsConfig:
     num_iterations:Optional[int]=1
     num_classifications:Optional[int]=15
     prompt_template:Optional[str]=None
+    replace_default_classifications:Optional[bool]=False

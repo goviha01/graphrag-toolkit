@@ -3,6 +3,7 @@
 import logging
 import time
 import statistics
+import json
 from typing import List, Dict
 
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
@@ -100,7 +101,8 @@ class EntityContextProvider():
         end = time.time()
         duration_ms = (end-start) * 1000
 
-        logger.debug(f'entity_id_context_tree: {entity_id_context_tree} ({duration_ms:.2f} ms)')
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f'entity_id_context_tree: {entity_id_context_tree} ({duration_ms:.2f} ms)')
                 
         return entity_id_context_tree
     
@@ -118,7 +120,8 @@ class EntityContextProvider():
         for _, d in entity_id_context_tree.items():
             walk_tree(d)
         
-        logger.debug(f'neighbour_entity_ids: {list(neighbour_entity_ids)}')
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f'neighbour_entity_ids: {list(neighbour_entity_ids)}')
 
         cypher = f"""
         // expand entities: score entities by number of relations
@@ -144,13 +147,16 @@ class EntityContextProvider():
         end = time.time()
         duration_ms = (end-start) * 1000
         
-        logger.debug(f'neighbour_entities: {neighbour_entities} ({duration_ms:.2f} ms)')
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f'neighbour_entities ({duration_ms:.2f} ms): {neighbour_entities}')
+        else:
+            logger.debug(f"neighbour_entities ({duration_ms:.2f} ms): {[f'{e.entity.value} ({e.entity.classification}) [{e.score}]' for e in neighbour_entities]}")
 
         return neighbour_entities
 
         
     def _get_entity_contexts(self, entities:List[ScoredEntity], entity_id_context_tree:Dict[str, Dict], query_bundle:QueryBundle) -> List[List[ScoredEntity]]:
-
+        
         start = time.time()
        
         all_entities = {
@@ -175,7 +181,8 @@ class EntityContextProvider():
 
         walk_tree_ex([], entity_id_context_tree)
 
-        logger.debug(f'all_contexts_map: {all_contexts_map}')
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f'all_contexts_map: {all_contexts_map}')
 
         partial_path_keys = []
         
@@ -189,22 +196,26 @@ class EntityContextProvider():
 
         all_contexts = [context for _, context in all_contexts_map.items()]
 
-        logger.debug(f'all_contexts: {all_contexts}')
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f'all_contexts: {all_contexts}')
 
         deduped_contexts = self.dedup_contexts(all_contexts)
 
-        logger.debug(f'deduped_contexts: {deduped_contexts}')
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f'deduped_contexts: {deduped_contexts}')
 
         ordered_contexts = self.order_context_subtrees(deduped_contexts)
 
-        logger.debug(f'ordered_contexts: {ordered_contexts}')
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f'ordered_contexts: {ordered_contexts}')
 
         contexts = ordered_contexts[:self.args.ec_max_contexts]
 
         end = time.time()
         duration_ms = (end-start) * 1000
 
-        logger.debug(f'contexts: {contexts} ({duration_ms:.2f} ms)')
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f'contexts: {contexts} ({duration_ms:.2f} ms)')
 
         return contexts
     
@@ -283,17 +294,22 @@ class EntityContextProvider():
     
     def filter_entities(self, entities:List[ScoredEntity]) -> List[ScoredEntity]:
 
-        baseline_score=entities[0].score
+        baseline_score = entities[0].score
 
         upper_score_threshold = baseline_score * self.args.ec_max_score_factor
         lower_score_threshhold = baseline_score * self.args.ec_min_score_factor
 
-        logger.debug(f'upper_score_threshold: {upper_score_threshold}, lower_score_threshhold: {lower_score_threshhold}')
+        logger.debug(f'Filtering thresholds: [upper: {upper_score_threshold}, lower: {lower_score_threshhold}]')
+
+        logger.debug(f"Candidate entities: {[f'{e.entity.value} ({e.entity.classification}) [{e.score}/{e.reranking_score}]' for e in entities]}")
 
         def filter_entity(entity:ScoredEntity):
             allow = entity.score <= upper_score_threshold and entity.score >= lower_score_threshhold
             if not allow:
-                logger.debug(f'Discarding entity: {entity.model_dump_json(exclude_unset=True, exclude_none=True, warnings=False)}')
+                if type(self).__name__ in self.args.debug_results:
+                    logger.debug(f'Discarding entity: {entity.model_dump_json(exclude_unset=True, exclude_none=True, warnings=False)}')
+                else:
+                    logger.debug(f'Discarding: {entity.entity.value} ({entity.entity.classification}) [{entity.score}/{entity.reranking_score}]')
             return allow
 
         filtered_entities = [
@@ -304,7 +320,8 @@ class EntityContextProvider():
 
         filtered_entities.sort(key=lambda e:e.score, reverse=True)
 
-        logger.debug(f'filtered_entities: {filtered_entities}')
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f'filtered_entities: {filtered_entities}')
 
         return filtered_entities
              
@@ -312,14 +329,17 @@ class EntityContextProvider():
 
         start = time.time()
 
-        if entities:
-        
+        allow_continue = self.args.ec_max_contexts and self.args.ec_max_contexts > 0
+
+        if entities and allow_continue:
+
             entity_id_context_tree = self._get_entity_id_context_tree(entities)
             
             neighbour_entities = self._get_neighbour_entities(
                 entity_id_context_tree=entity_id_context_tree
             )
 
+            logger.debug(f'Reranking phrases: {[query_bundle.query_str] + keywords}')
             reranked_neighbour_entities = rerank_entities(neighbour_entities, query_bundle, keywords, self.args.reranker)
 
             entities.extend(reranked_neighbour_entities)     
@@ -338,9 +358,9 @@ class EntityContextProvider():
         end = time.time()
         duration_ms = (end-start) * 1000
 
-        logger.debug(f"""Retrieved {len(entity_contexts)} entity contexts for '{query_bundle.query_str} {keywords}' ({duration_ms:.2f} ms): {[
-            str([e.entity.value for e in context])
-            for context in entity_contexts
-        ]}""")
+        ec = EntityContexts(contexts=[EntityContext(entities=entities) for entities in entity_contexts])
 
-        return EntityContexts(contexts=[EntityContext(entities=entities) for entities in entity_contexts])
+        logger.debug(f"""Entity contexts ({duration_ms:.2f} ms): 
+{json.dumps(ec.context_strs, indent=2)}""")
+
+        return ec

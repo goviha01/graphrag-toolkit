@@ -52,6 +52,9 @@ class DisaggregateResults(ProcessorBase):
             SearchResultCollection: An updated collection of search results with disaggregated topics and recalculated
             scores.
         """
+        if not self.args.disaggregate_results:
+            return search_results
+
         disaggregated_results = []
 
         for search_result in search_results.results:

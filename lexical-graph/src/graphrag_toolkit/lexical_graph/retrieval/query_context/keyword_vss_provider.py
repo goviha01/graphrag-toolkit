@@ -67,7 +67,8 @@ class KeywordVSSProvider(KeywordProviderBase):
         
         node_ids = [result[index_name][id_name] for result in vss_results]
 
-        logger.debug(f'node_ids: [index: {index_name}, ids: {node_ids}]')
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f'node_ids: [index: {index_name}, ids: {node_ids}]')
 
         return node_ids
     
@@ -150,8 +151,9 @@ class KeywordVSSProvider(KeywordProviderBase):
             context='\n\n'.join(content),
             num_keywords=self.args.max_keywords
         )
-
-        logger.debug(f'response: {response}')
+        
+        if type(self).__name__ in self.args.debug_results:
+            logger.debug(f'response: {response}')
 
         keywords = [k for k in response.split('\n') if k]
 

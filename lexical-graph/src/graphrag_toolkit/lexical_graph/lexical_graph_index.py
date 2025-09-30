@@ -370,7 +370,8 @@ class LexicalGraphIndex():
                     num_samples=infer_config.num_samples,
                     num_iterations=infer_config.num_iterations,
                     num_classifications=infer_config.num_classifications,
-                    prompt_template=infer_config.prompt_template
+                    prompt_template=infer_config.prompt_template,
+                    replace_default_classifications=infer_config.replace_default_classifications
                 )
 
                 pre_processors.append(entity_classification_provider)
