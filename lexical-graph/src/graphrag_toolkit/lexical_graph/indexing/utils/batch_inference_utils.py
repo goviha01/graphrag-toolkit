@@ -313,3 +313,49 @@ async def process_batch_output(local_output_directory:str, input_filename:str, l
     logger.debug(f'[Batch outputs] Finished processing all outputs for {input_filename} ({int((process_output_end - process_output_start) * 1000)} millis)')
 
     return results
+
+def process_batch_output_sync(local_output_directory:str, input_filename:str, llm:LLMCache):
+    
+    success_count = 0
+    failure_count = 0
+   
+    process_output_start = time.time()
+
+    parse_output_text = get_parse_output_text_fn(llm.llm.model)
+
+    logger.debug(f'[Batch outputs] Started processing all outputs for {input_filename}')
+
+    def process_failed_record(record_id, text, error):
+        try:
+            response = llm.predict(PromptTemplate(text))
+            return (record_id, response)
+        except Exception as e:
+            logger.error(f'[Batch outputs] Error processing failed record {record_id}: {str(e)} [original_error: {str(error)}]')
+            return (record_id, None)
+
+
+    for filename in os.listdir(local_output_directory):
+        if filename.startswith(input_filename):
+            output_filepath = os.path.join(local_output_directory, filename)
+            logger.debug(f'[Batch outputs] Started parsing output file {output_filepath}')
+            with open(output_filepath, 'r', encoding='utf-8') as jsonl_file:
+                for line in jsonl_file:
+                    json_data = json.loads(line)
+                    record_id = json_data.get('recordId')
+                    error = json_data.get('error')
+                    if not error:
+                        model_output_text = parse_output_text(json_data)
+                        success_count += 1
+                        yield (record_id, model_output_text)
+                    else:
+                        (record_id, response) = process_failed_record(record_id, json_data.get('modelInput', {}).get('messages', [{}])[0].get('content', [{}])[0].get('text', ''), error)
+                        if response:
+                            success_count += 1
+                        else:
+                            failure_count += 1
+                            logger.debug
+                        yield (record_id, response)
+
+    process_output_end = time.time()
+                        
+    logger.debug(f'[Batch outputs] Finished parsing all outputs for {input_filename} [succeeded: {success_count}, failed: {failure_count}] ({int((process_output_end - process_output_start) * 1000)} millis)')

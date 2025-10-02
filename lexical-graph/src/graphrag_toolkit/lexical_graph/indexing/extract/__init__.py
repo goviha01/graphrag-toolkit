@@ -4,6 +4,7 @@
 from .extraction_pipeline import ExtractionPipeline
 from .batch_config import BatchConfig
 from .llm_proposition_extractor import LLMPropositionExtractor
+from .batch_llm_proposition_extractor_sync import BatchLLMPropositionExtractorSync
 from .proposition_extractor import PropositionExtractor
 from .batch_llm_proposition_extractor import BatchLLMPropositionExtractor
 from .batch_topic_extractor import BatchTopicExtractor

@@ -18,7 +18,7 @@ from graphrag_toolkit.lexical_graph.indexing import NodeHandler
 from graphrag_toolkit.lexical_graph.indexing import sink
 from graphrag_toolkit.lexical_graph.indexing.constants import PROPOSITIONS_KEY, DEFAULT_ENTITY_CLASSIFICATIONS
 from graphrag_toolkit.lexical_graph.indexing.extract import PREFERRED_VALUES_PROVIDER_TYPE, default_preferred_values
-from graphrag_toolkit.lexical_graph.indexing.extract import LLMPropositionExtractor, BatchLLMPropositionExtractor
+from graphrag_toolkit.lexical_graph.indexing.extract import LLMPropositionExtractor, BatchLLMPropositionExtractor, BatchLLMPropositionExtractorSync
 from graphrag_toolkit.lexical_graph.indexing.extract import TopicExtractor, BatchTopicExtractor
 from graphrag_toolkit.lexical_graph.indexing.extract import ExtractionPipeline
 from graphrag_toolkit.lexical_graph.indexing.extract import InferClassifications, InferClassificationsConfig
@@ -335,7 +335,7 @@ class LexicalGraphIndex():
 
         if config.extraction.enable_proposition_extraction:
             if config.batch_config:
-                components.append(BatchLLMPropositionExtractor(
+                components.append(BatchLLMPropositionExtractorSync(
                     batch_config=config.batch_config,
                     prompt_template=config.extraction.extract_propositions_prompt_template
                 ))
