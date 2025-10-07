@@ -286,7 +286,7 @@ class ExtractionPipeline():
 
         logger.debug(f'Extract pipeline components: {[type(c).__name__ for c in components]}')
 
-        self.ingestion_pipeline = IngestionPipeline(transformations=components)
+        self.ingestion_pipeline = IngestionPipeline(transformations=components, disable_cache=True)
         self.pre_processors = pre_processors or []
         self.extraction_decorator = extraction_decorator or PassThroughDecorator()
         self.num_workers = num_workers
@@ -313,16 +313,27 @@ class ExtractionPipeline():
             List[SourceDocument]: A list of SourceDocument objects, each containing nodes
                 grouped by their source relationship.
         """
-        results:Dict[str, SourceDocument] = {}
+        current_source_id = None
+        current_source_document = None
         
         for node in nodes:
             source_info = node.relationships[NodeRelationship.SOURCE]
             source_id = source_info.node_id
-            if source_id not in results:
-                results[source_id] = SourceDocument()
-            results[source_id].nodes.append(node)
-
-        return list(results.values())
+            
+            if not current_source_id:
+                current_source_document = SourceDocument()
+                current_source_id = source_id
+ 
+            if source_id != current_source_id:
+                if current_source_document:
+                    yield current_source_document
+                current_source_document = SourceDocument()
+                current_source_id = source_id
+                
+            current_source_document.nodes.append(node)
+            
+        if current_source_document:
+            yield current_source_document
     
     def extract(self, inputs: Iterable[SourceType]):
         """

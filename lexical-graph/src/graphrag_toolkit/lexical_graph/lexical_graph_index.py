@@ -18,8 +18,8 @@ from graphrag_toolkit.lexical_graph.indexing import NodeHandler
 from graphrag_toolkit.lexical_graph.indexing import sink
 from graphrag_toolkit.lexical_graph.indexing.constants import PROPOSITIONS_KEY, DEFAULT_ENTITY_CLASSIFICATIONS
 from graphrag_toolkit.lexical_graph.indexing.extract import PREFERRED_VALUES_PROVIDER_TYPE, default_preferred_values
-from graphrag_toolkit.lexical_graph.indexing.extract import LLMPropositionExtractor, BatchLLMPropositionExtractor, BatchLLMPropositionExtractorSync
-from graphrag_toolkit.lexical_graph.indexing.extract import TopicExtractor, BatchTopicExtractor
+from graphrag_toolkit.lexical_graph.indexing.extract import LLMPropositionExtractor, BatchLLMPropositionExtractorSync
+from graphrag_toolkit.lexical_graph.indexing.extract import TopicExtractor, BatchTopicExtractorSync
 from graphrag_toolkit.lexical_graph.indexing.extract import ExtractionPipeline
 from graphrag_toolkit.lexical_graph.indexing.extract import InferClassifications, InferClassificationsConfig
 from graphrag_toolkit.lexical_graph.indexing.build import BuildPipeline
@@ -389,7 +389,7 @@ class LexicalGraphIndex():
         topic_extractor = None
 
         if config.batch_config:
-            topic_extractor = BatchTopicExtractor(
+            topic_extractor = BatchTopicExtractorSync(
                 batch_config=config.batch_config,
                 source_metadata_field=PROPOSITIONS_KEY if config.extraction.enable_proposition_extraction else None,
                 entity_classification_provider=entity_classification_provider,
@@ -449,6 +449,7 @@ class LexicalGraphIndex():
             components=[
                 NullBuilder()
             ],
+            builders=[],
             show_progress=show_progress,
             checkpoint=checkpoint,
             num_workers=1,

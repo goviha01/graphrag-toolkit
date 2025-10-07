@@ -226,7 +226,8 @@ class FilterConfig(BaseModel):
             bool: True if the dictionary passes the filter; otherwise, False.
         """
         result = self.source_metadata_dictionary_filter_fn(d)
-        logger.debug(f'filter result: [{str(d)}: {result}]')
+        if not result:
+            logger.debug(f'filter result: [{str(d)}: {result}]')
         return result
 
 

@@ -40,10 +40,10 @@ class NodeBuilders():
 
     def __init__(
             self, 
-            builders:List[NodeBuilder]=[], 
-            build_filters:BuildFilters=None, 
+            builders:Optional[List[NodeBuilder]]=None, 
+            build_filters:Optional[BuildFilters]=None, 
             source_metadata_formatter:Optional[SourceMetadataFormatter]=None,
-            id_generator:IdGenerator=None
+            id_generator:Optional[IdGenerator]=None
         ):
         
         """
@@ -75,7 +75,7 @@ class NodeBuilders():
 
         self.build_filters = build_filters
         self.id_generator = id_generator
-        self.builders = builders or self.default_builders(id_generator, build_filters, source_metadata_formatter)
+        self.builders = builders if builders is not None else self.default_builders(id_generator, build_filters, source_metadata_formatter)
 
         logger.debug(f'Node builders: {[type(b).__name__ for b in self.builders]}')
     
@@ -125,6 +125,9 @@ class NodeBuilders():
         Raises:
             Exception: If an error occurs during the node-building process by any builder.
         """
+
+        if len(self.builders) == 0:
+            return input_nodes
         
         def apply_tenant_rewrites(node):
             

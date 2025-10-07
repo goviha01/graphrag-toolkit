@@ -14,7 +14,7 @@ from llama_index.core.schema import BaseNode, Document
 def _sink():
     def _sink_from(generator):
         for item in generator:
-            pass
+            continue
     return Pipe(_sink_from)
 
 sink = _sink()
@@ -38,9 +38,10 @@ def run_pipeline(
 
     with ProcessPoolExecutor(max_workers=num_workers) as p:
         processed_node_batches = p.map(transform, node_batches)
-        processed_nodes = sum(processed_node_batches, start=cast(List[BaseNode], []))
-
-    return processed_nodes
+        
+    for processed_node_batch in processed_node_batches:
+        for processed_node in processed_node_batch:
+            yield processed_node
 
 def node_batcher(
         num_batches: int, nodes: Union[Sequence[BaseNode], List[Document]]

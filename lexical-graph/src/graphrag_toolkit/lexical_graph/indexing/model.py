@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pydantic import BaseModel, ConfigDict
-from typing import List, Optional, Union, Dict, Generator, Iterable
+from typing import List, Optional, Union, Generator, Iterable
 
 from llama_index.core.schema import TextNode, Document, BaseNode
-from llama_index.core.schema import NodeRelationship, RelatedNodeInfo
+from llama_index.core.schema import NodeRelationship
 
 class SourceDocument(BaseModel):
     """
@@ -67,7 +67,8 @@ def source_documents_from_source_types(inputs: Iterable[SourceType]) -> Generato
         Generator[SourceDocument, None, None]: A generator of `SourceDocument`
             objects created from the input data set.
     """
-    chunks_by_source:Dict[str, SourceDocument] = {}
+    current_source_document = None
+    current_source_id = None
 
     for i in inputs:
         if isinstance(i, SourceDocument):
@@ -77,14 +78,23 @@ def source_documents_from_source_types(inputs: Iterable[SourceType]) -> Generato
         elif isinstance(i, TextNode):
             source_info = i.relationships[NodeRelationship.SOURCE]
             source_id = source_info.node_id
-            if source_id not in chunks_by_source:
-                chunks_by_source[source_id] = SourceDocument()
-            chunks_by_source[source_id].nodes.append(i)
+            
+            if not current_source_id:
+                current_source_document = SourceDocument()
+                current_source_id = source_id
+                
+            if source_id != current_source_id:
+                if current_source_document:
+                    yield current_source_document
+                current_source_document = SourceDocument()
+                current_source_id = source_id
+                
+            current_source_document.nodes.append(i)    
         else:
             raise ValueError(f'Unexpected source type: {type(i)}')
 
-    for nodes in chunks_by_source.values():
-        yield SourceDocument(nodes=list(nodes))
+    if current_source_document:
+        yield current_source_document
 
 
 class Propositions(BaseModel):

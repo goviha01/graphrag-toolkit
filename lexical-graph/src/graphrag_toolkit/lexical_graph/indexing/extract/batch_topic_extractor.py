@@ -14,7 +14,7 @@ from datetime import datetime
 from graphrag_toolkit.lexical_graph import GraphRAGConfig, BatchJobError
 from graphrag_toolkit.lexical_graph.utils import LLMCache, LLMCacheType
 from graphrag_toolkit.lexical_graph.indexing.utils.topic_utils import parse_extracted_topics, format_list, format_text
-from graphrag_toolkit.lexical_graph.indexing.utils.batch_inference_utils import create_inference_inputs_for_messages, create_and_run_batch_job, download_output_files, process_batch_output, split_nodes, get_request_body
+from graphrag_toolkit.lexical_graph.indexing.utils.batch_inference_utils import create_and_run_batch_job, download_output_files, process_batch_output, split_nodes, get_request_body
 from graphrag_toolkit.lexical_graph.indexing.utils.batch_inference_utils import get_file_size_mb, get_file_sizes_mb
 from graphrag_toolkit.lexical_graph.indexing.constants import TOPICS_KEY
 from graphrag_toolkit.lexical_graph.indexing.prompts import EXTRACT_TOPICS_PROMPT

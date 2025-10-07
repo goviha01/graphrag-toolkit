@@ -37,5 +37,8 @@ class NullBuilder(NodeHandler):
             BaseNode: Each node from the input list is yielded after being processed (specifically logged in this case).
         """
         for node in nodes:
-            logger.debug(f'Accepted node [node_id: {node.node_id}]')         
-            yield node
+            try:
+                logger.debug(f'Accepted node [node_id: {node.node_id}]')         
+                yield node
+            except Exception as e:
+                logger.error(f'Error while accepting node: {str(e)}')
