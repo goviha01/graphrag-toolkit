@@ -195,9 +195,11 @@ class BatchExtractorBase(BaseExtractor):
                     nodes_map[source_id] = []
                 nodes_map[source_id].append(node)
                 
-        for nodes in nodes_map.values():
-            for node in nodes:
-                yield node
+        return [
+            node
+            for nodes in nodes_map.values()
+            for node in nodes     
+        ]
     
     def _to_results_generator(self, node_metadata_list:List[Dict]):
         for node_metadata in node_metadata_list:
