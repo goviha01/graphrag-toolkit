@@ -10,7 +10,7 @@ import json
 import shutil
 from os.path import join
 from abc import abstractmethod
-from typing import Optional, Sequence, List, Dict, Any, cast
+from typing import Optional, Sequence, List, Dict, Any, cast, Iterable
 from datetime import datetime
 
 from graphrag_toolkit.lexical_graph import GraphRAGConfig, BatchJobError
@@ -94,7 +94,7 @@ class BatchExtractorBase(BaseExtractor):
     def _update_node(self, node:TextNode, node_metadata_map):
         raise NotImplemented()
         
-    def _process_single_batch(self, batch_index:int, node_batch:List[TextNode], s3_client, bedrock_client):
+    def _process_single_batch(self, batch_index:int, node_batch:Iterable[TextNode], s3_client, bedrock_client):
         try:
 
             batch_start = time.time()
@@ -182,24 +182,12 @@ class BatchExtractorBase(BaseExtractor):
             raise BatchJobError(f'[{self.description} batch] Error processing batch {batch_index} ({int(batch_end-batch_start)} seconds): {str(e)}') from e 
     
     
-    def _get_nodes_from_temp_dir(self, node_file_paths:List[str]) -> Sequence[BaseNode]:
+    def _get_nodes_from_temp_dir(self, node_file_paths:List[str]):
         
-        nodes_map = {}
-
         for node_file_path in node_file_paths:
             with open(node_file_path) as f:
                 node = TextNode.from_json(f.read())
-                source_info = node.relationships[NodeRelationship.SOURCE]
-                source_id = source_info.node_id
-                if source_id not in nodes_map:
-                    nodes_map[source_id] = []
-                nodes_map[source_id].append(node)
-                
-        return [
-            node
-            for nodes in nodes_map.values()
-            for node in nodes     
-        ]
+                yield node
     
     def _to_results_generator(self, node_metadata_list:List[Dict]):
         for node_metadata in node_metadata_list:
@@ -219,8 +207,13 @@ class BatchExtractorBase(BaseExtractor):
             if isinstance(node, TextNode):
                 cast(TextNode, node).text_template = self.node_text_template 
         return node
-
     
+    def _save_node_in_temp_dir(self, node:TextNode, temp_dir:str):
+        node_output_path = join(temp_dir, f'{node.node_id}.json')
+        with open(node_output_path, 'w') as f:
+            json.dump(node.to_dict(), f, indent=4)
+        return node_output_path
+
     def _process_nodes(self, 
         nodes:Sequence[BaseNode],
         excluded_embed_metadata_keys: Optional[List[str]] = None,
@@ -236,10 +229,8 @@ class BatchExtractorBase(BaseExtractor):
         self._prepare_directory(temp_dir)
 
         for node in nodes:
-            node_output_path = join(temp_dir, f'{node.node_id}.json')
+            node_output_path = self._save_node_in_temp_dir(node, temp_dir)
             node_file_paths[node_output_path] = None
-            with open(node_output_path, 'w') as f:
-                json.dump(node.to_dict(), f, indent=4)
 
         nodes = None
 
@@ -272,30 +263,41 @@ class BatchExtractorBase(BaseExtractor):
                 for future in futures:
                     results_generators.append(future.result())
 
+        final_node_file_paths = []
+
         # 3 - Process results
         for results_generator in results_generators:
             for (node_id, text) in results_generator:
 
                 node_file_path = join(temp_dir, f'{node_id}.json')
-                node = self._get_nodes_from_temp_dir([node_file_path])[0]
+                node = next(self._get_nodes_from_temp_dir([node_file_path]))
 
                 node = self._update_node(node, { node.node_id: text })
                 node = self._post_process_node(node, excluded_embed_metadata_keys, excluded_llm_metadata_keys)
+
+                self._save_node_in_temp_dir(node, temp_dir)
                 
                 del node_file_paths[node_file_path]
-
-                yield node
-
+                final_node_file_paths.append(node_file_path)
         
         # 4 - Handle nodes that have not been extracted
         if len(node_file_paths.keys()) > 0:
             logger.debug(f'[{self.description} batch] {len(node_file_paths.keys())} nodes without extracted data')
 
-        for file_path in node_file_paths.keys():
-            node = self._get_nodes_from_temp_dir([file_path])[0]
+        for node_file_path in node_file_paths.keys():
+            node = next(self._get_nodes_from_temp_dir([node_file_path]))
             node = self._update_node(node, { node.node_id: None })
             node = self._post_process_node(node, excluded_embed_metadata_keys, excluded_llm_metadata_keys)
 
+            self._save_node_in_temp_dir(node, temp_dir)
+
+            del node_file_paths[node_file_path]
+            final_node_file_paths.append(node_file_path)
+
+        
+        final_node_file_paths.sort()
+
+        for node in self._get_nodes_from_temp_dir(final_node_file_paths):
             yield node
 
         if self.batch_config.delete_on_success:
