@@ -6,6 +6,7 @@ import os
 from os.path import join
 from typing import Any, List
 
+from graphrag_toolkit.lexical_graph.tenant_id import TenantId
 from graphrag_toolkit.lexical_graph.indexing.node_handler import NodeHandler
 from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY
 
@@ -42,6 +43,7 @@ class CheckpointFilter(TransformComponent, DoNotCheckpoint):
     checkpoint_name:str
     checkpoint_dir:str
     inner:TransformComponent
+    tenant_id:TenantId
         
     def checkpoint_does_not_exist(self, node_id):
         """
@@ -61,12 +63,13 @@ class CheckpointFilter(TransformComponent, DoNotCheckpoint):
                 be ignored. Returns True if the checkpoint does not exist,
                 indicating the node should be included.
         """
-        node_checkpoint_path = join(self.checkpoint_dir, node_id)
+        tenant_node_id = self.tenant_id.rewrite_id(node_id)
+        node_checkpoint_path = join(self.checkpoint_dir, tenant_node_id)
         if os.path.exists(node_checkpoint_path):
-            logger.debug(f'Ignoring node because checkpoint already exists [node_id: {node_id}, checkpoint: {self.checkpoint_name}, component: {type(self.inner).__name__}]')
+            logger.debug(f'Ignoring node because checkpoint already exists [node_id: {tenant_node_id}, checkpoint: {self.checkpoint_name}, component: {type(self.inner).__name__}]')
             return False
         else:
-            logger.debug(f'Including node [node_id: {node_id}, checkpoint: {self.checkpoint_name}, component: {type(self.inner).__name__}]')
+            logger.debug(f'Including node [node_id: {tenant_node_id}, checkpoint: {self.checkpoint_name}, component: {type(self.inner).__name__}]')
             return True
         
     def __call__(self, nodes: List[BaseNode], **kwargs: Any) -> List[BaseNode]:
@@ -167,7 +170,7 @@ class Checkpoint():
         self.checkpoint_dir = self.prepare_output_directories(checkpoint_name, output_dir)
         self.enabled = enabled
 
-    def add_filter(self, o):
+    def add_filter(self, o, tenant_id:TenantId):
         """
         Adds a checkpoint filter to a transform component if conditions are met.
 
@@ -186,7 +189,7 @@ class Checkpoint():
         """
         if self.enabled and isinstance(o, TransformComponent) and not isinstance(o, DoNotCheckpoint):
             logger.debug(f'Wrapping with checkpoint filter [checkpoint: {self.checkpoint_name}, component: {type(o).__name__}]')
-            return CheckpointFilter(inner=o, checkpoint_dir=self.checkpoint_dir, checkpoint_name=self.checkpoint_name)
+            return CheckpointFilter(inner=o, checkpoint_dir=self.checkpoint_dir, checkpoint_name=self.checkpoint_name, tenant_id=tenant_id)
         else:
             logger.debug(f'Not wrapping with checkpoint filter [checkpoint: {self.checkpoint_name}, component: {type(o).__name__}]')
             return o
