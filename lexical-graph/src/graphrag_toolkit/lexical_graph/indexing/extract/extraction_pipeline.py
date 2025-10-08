@@ -282,7 +282,7 @@ class ExtractionPipeline():
             components.insert(0, IdRewriter(inner=DocsToNodes(), id_generator=id_generator))
             
         if checkpoint:
-            components = [checkpoint.add_filter(c) for c in components]
+            components = [checkpoint.add_filter(c, tenant_id) for c in components]
 
         logger.debug(f'Extract pipeline components: {[type(c).__name__ for c in components]}')
 
