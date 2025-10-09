@@ -4,7 +4,7 @@
 import logging
 import time
 import json
-from typing import List, Dict, Any, Annotated, Optional, Union
+from typing import List, Dict, Any, Annotated, Optional, Union, Literal, Protocol, Tuple, runtime_checkable
 from pydantic import Field
 
 from graphrag_toolkit.lexical_graph import LexicalGraphQueryEngine
@@ -13,7 +13,61 @@ from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
 from graphrag_toolkit.lexical_graph.storage.vector import VectorStore
 from graphrag_toolkit.lexical_graph.retrieval.summary import GraphSummary, get_domain
 
+from llama_index.core.base.response.schema import StreamingResponse
+from fastmcp.tools.tool_transform import ArgTransform
+from fastmcp.utilities.types import NotSet
+
 logger = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class UpdateParametersFunction(Protocol):
+
+    def __call__(self, tool_params:Dict[str,Any], query_engine_params:Dict[str,Any]) -> None:
+        pass
+
+
+class ToolParameters():
+
+    def __init__(
+            self, 
+            parameters:List[ArgTransform]=[],
+            update_params_function:UpdateParametersFunction = lambda _, query_engine_params: query_engine_params
+        ):
+
+        if len(parameters) == 3:
+            raise ValueError('Maximum number of tool parameters exceeded. You can only supply up to 3 tool parameters.')
+        
+        self.parameters = parameters
+        self.update_params_function = update_params_function
+
+        for p in self.parameters:
+            if p.name == NotSet:
+                raise ValueError('Tool parameter name missing')
+            p.required = True
+            p.hide = False
+
+class ToolParametersTransform():
+    def __init__(self, transform_args:Dict[str,ArgTransform]={}):
+        self.transform_args = transform_args
+
+    def transform_params(self, query:str, query_method:Literal['retrieve', 'query'], _arg_1:Any, _arg_2:Any, _arg_3:Any):
+        
+        params = {
+            'query': query,
+            'query_method': query_method,
+        }
+
+        if '_arg_1' in self.transform_args:
+            params[self.transform_args['_arg_1'].name] = _arg_1
+        if '_arg_2' in self.transform_args:
+            params[self.transform_args['_arg_2'].name] = _arg_2
+        if '_arg_3' in self.transform_args:
+            params[self.transform_args['_arg_3'].name] = _arg_3
+
+        logger.debug(f'tool_params: {params}')
+        
+        return params
 
 def tool_search(graph_store:GraphStore, tenant_ids:List[TenantId]):
 
@@ -54,30 +108,61 @@ def tool_search(graph_store:GraphStore, tenant_ids:List[TenantId]):
 
     return search_for_tool
 
-def query_tenant_graph(graph_store:GraphStore, vector_store:VectorStore, tenant_id:TenantId, domain:str, **kwargs):
+def query_tenant_graph(
+        graph_store:GraphStore, 
+        vector_store:VectorStore, 
+        tenant_id:TenantId, 
+        domain:str, 
+        tool_params_transform:ToolParametersTransform, 
+        update_params:UpdateParametersFunction, 
+        **kwargs
+    ):
     
     description = f'A natural language query related to the domain of {domain}' if domain else 'A natural language query'
     
-    def query_graph(query: Annotated[str, Field(description=description)]) -> List[Dict[str, Any]]:
+    def query_graph(
+            query: Annotated[str, Field(description=description)], 
+            _arg_1: Annotated[Optional[str], Field(description='Placeholder', default=None)],
+            _arg_2: Annotated[Optional[str], Field(description='Placeholder', default=None)],
+            _arg_3: Annotated[Optional[str], Field(description='Placeholder', default=None)]
+        ) -> List[Dict[str, Any]]:
+
+        query_engine_kwargs = kwargs.copy()
+        query_engine_kwargs['enable_multipart_queries'] = query_engine_kwargs.pop('enable_multipart_queries', True)
+
+        tool_params = tool_params_transform.transform_params(query, 'retrieve', _arg_1, _arg_2, _arg_3)
+
+        update_params(tool_params, query_engine_kwargs)
         
         query_engine = LexicalGraphQueryEngine.for_traversal_based_search(
             graph_store, 
             vector_store,
             tenant_id=tenant_id,
-            enable_multipart_queries=True,
-            **kwargs
+            **query_engine_kwargs
         )
 
         start = time.time()
 
-        response = query_engine.retrieve(query)
-        
+        if tool_params['query_method'] == 'retrieve':
+
+            response = query_engine.retrieve(tool_params['query'])
+            results = [json.loads(n.text) for n in response]
+
+        else:
+
+            response = query_engine.query(tool_params['query'])
+
+            if isinstance(response, StreamingResponse):
+                response = response.get_response()
+            
+            results = [{
+                'text': response.response
+            }]
+            
         end = time.time()
 
-        results = [json.loads(n.text) for n in response]
-
         logger.debug(f'[{tenant_id}]: {query} [{len(results)} results, {int((end-start) * 1000)} millis]')
-        
+
         return results
         
     return query_graph
@@ -104,8 +189,9 @@ Config:
     '<tenant_id>': {
         'description': '<short description - optional>',
         'refresh': True|False,
-        'args': {
-            LexicalGraphQueryEngine args
+        'tool_parameters': ToolParameters(),
+        'query_engine_args': {
+            LexicalGraphQueryEngine kwargs
         }
     }
 }
@@ -148,20 +234,36 @@ def create_mcp_server(graph_store:GraphStore, vector_store:VectorStore, tenant_i
 
             domain = get_domain(summary)
 
-            args = kwargs.copy()
-            args.update(tenant_id_config.get('args', {}))
+            query_engine_args = kwargs.copy()
+            query_engine_args.update(tenant_id_config.get('query_engine_args', {}))
 
-            logger.debug(f'Adding tool: [tenant_id: {tenant_id}, domain: {domain}, args: {args}]')
+            tool_parameters:ToolParameters = tenant_id_config.get('tool_parameters', ToolParameters())
+            transform_args = {
+                f'_arg_{i + 1}': arg_transform
+                for i, arg_transform in enumerate(tool_parameters.parameters)
+            }
+            tool_params_transform = ToolParametersTransform(transform_args)
 
+            logger.debug(f'Adding tool: [tenant_id: {tenant_id}, domain: {domain}, tool_params: {[a.name for a in transform_args.values()]}, query_engine_args: {query_engine_args}]')
 
-            mcp.add_tool(
-                Tool.from_function(
-                    fn=query_tenant_graph(graph_store, vector_store, tenant_id, domain, **args),
-                    name = str(tenant_id),
-                    description = summary
-                )
-                
+            tool = Tool.from_function(
+                fn=query_tenant_graph(
+                    graph_store, 
+                    vector_store, 
+                    tenant_id, 
+                    domain, 
+                    tool_params_transform,
+                    tool_parameters.update_params_function,
+                    **query_engine_args
+                ),
+                name = str(tenant_id),
+                description = summary
             )
+
+            if tool_parameters.parameters:
+                tool = Tool.from_tool(tool, transform_args=transform_args)
+
+            mcp.add_tool(tool)
 
     if tenant_ids:
         mcp.add_tool(
@@ -169,8 +271,7 @@ def create_mcp_server(graph_store:GraphStore, vector_store:VectorStore, tenant_i
                 fn=tool_search(graph_store, tenant_ids),
                 name = 'search_',
                 description = 'Given a search term, returns the name of one or more tools that can be used to provide information about the search term. Use this tool to help find other tools that can answer a query.'
-            )
-            
+            )        
         )
 
     return mcp

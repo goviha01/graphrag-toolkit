@@ -116,7 +116,7 @@ class GraphSummaryBuilder(GraphBuilder):
 
                 query = '\n'.join(statements)
                     
-                graph_client.execute_query_with_retry(query, self._to_params(properties), max_attempts=5, max_wait=7)
+                graph_client.execute_query_with_retry(query, self._to_params(properties), max_attempts=10, max_wait=10)
 
         else:
             logger.warning(f'fact_id missing from fact node [node_id: {node.node_id}]')

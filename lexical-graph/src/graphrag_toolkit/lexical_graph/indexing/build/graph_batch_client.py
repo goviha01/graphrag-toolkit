@@ -165,7 +165,7 @@ class GraphBatchClient():
         for parameterless_query_batch in parameterless_query_batches:
             parameterless_query_batch = ['// parameterless queries'] + parameterless_query_batch
             query = '\n'.join(parameterless_query_batch)
-            self.graph_client.execute_query_with_retry(query, {}, max_attempts=5, max_wait=7)
+            self.graph_client.execute_query_with_retry(query, {}, max_attempts=10, max_wait=10)
 
     def _apply_batch_query(self, query, parameters):
 
@@ -179,7 +179,7 @@ class GraphBatchClient():
             params = {
                 'params': p
             }
-            self.graph_client.execute_query_with_retry(query, params, max_attempts=5, max_wait=7)
+            self.graph_client.execute_query_with_retry(query, params, max_attempts=10, max_wait=10)
 
     def _apply_batch_query_tree(self, query_tree_id, parameters):
 
@@ -200,7 +200,7 @@ class GraphBatchClient():
                     'params': chunk
                 }
 
-                results = self.graph_client.execute_query_with_retry(q, params, max_attempts=5, max_wait=7)
+                results = self.graph_client.execute_query_with_retry(q, params, max_attempts=10, max_wait=10)
 
                 for r in results:
                     yield r
