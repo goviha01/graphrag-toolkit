@@ -7,6 +7,9 @@
 import asyncio
 import llama_index.core.async_utils
 import logging as l
+import warnings
+
+warnings.filterwarnings('ignore', message="Can't initialize NVML")
 
 logger = l.getLogger(__name__)
 
