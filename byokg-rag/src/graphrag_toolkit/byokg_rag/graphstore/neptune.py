@@ -436,37 +436,49 @@ class NeptuneDBGraphStore(BaseNeptuneGraphStore):
         :return: dict The property graph schema
         """
 
-        response = self.neptune_data_client.get_propertygraph_summary()
+        response = self.neptune_data_client.get_propertygraph_summary(mode='detailed')
+        # When mode is 'detailed', returns nodeStructures and edgeStructures:
+        #    - nodeStructures: List of dicts with 'count', 'nodeProperties', and 'distinctOutgoingEdgeLabels'
+        #    - edgeStructures: List of dicts with 'count' and 'edgeProperties'
+
         logger.info(response)
         summary = response['payload']['graphSummary']
-        # quick effort at node label details, sample 100 nodes per type and get their distinct property keys
+        
+        # Extract node label details from the detailed summary
         summary["nodeLabelDetails"] = {}
-        for ntype in summary["nodeLabels"]:
-            oc_query = f"""MATCH (n:`{ntype}`)
-                           WITH n LIMIT 100
-                           UNWIND keys(n) AS key
-                           RETURN COLLECT(DISTINCT key) AS properties"""
-            response = self.execute_query(oc_query)
-            summary["nodeLabelDetails"][ntype] = response[0]
-        # quick effort at edge label details
+        if "nodeStructures" in summary:
+            for node_structure in summary["nodeStructures"]:
+                label = node_structure.get("nodeLabels", [None])[0]
+                if label:
+                    properties = [prop["property"] for prop in node_structure.get("nodeProperties", [])]
+                    summary["nodeLabelDetails"][label] = {"properties": properties}
+        
+        # Extract edge label details from the detailed summary
         summary["edgeLabelDetails"] = {}
-        for etype in summary["edgeLabels"]:
-            oc_query = f"""MATCH (startNode)-[r:`{etype}`]->(endNode)
-                           WITH r LIMIT 100
-                           UNWIND keys(r) AS key
-                           RETURN COLLECT(DISTINCT key) AS properties"""
-            response = self.execute_query(oc_query)
-            summary["edgeLabelDetails"][etype] = response[0]
-
-        # expensive effort to get label triples.not a big deal since get_schema is called just once usually.
-        # @TODO optimize
-        oc_query = """
-            MATCH (x)-[r]->(y)
-            RETURN DISTINCT head(labels(x)) AS `~from`, type(r) AS `~type`, head(labels(y)) AS `~to`"""
-        response = self.execute_query(oc_query)
-        summary["labelTriples"] = response
+        if "edgeStructures" in summary:
+            for edge_structure in summary["edgeStructures"]:
+                label = edge_structure.get("edgeLabels", [None])[0]
+                if label:
+                    properties = [prop["property"] for prop in edge_structure.get("edgeProperties", [])]
+                    summary["edgeLabelDetails"][label] = {"properties": properties}
+        
+        # Extract label triples from the detailed summary
+        summary["labelTriples"] = []
+        if "edgeStructures" in summary:
+            for edge_structure in summary["edgeStructures"]:
+                edge_label = edge_structure.get("edgeLabels", [None])[0]
+                from_labels = edge_structure.get("sourceNodeLabels", [])
+                to_labels = edge_structure.get("targetNodeLabels", [])
+                
+                for from_label in from_labels:
+                    for to_label in to_labels:
+                        summary["labelTriples"].append({
+                            "~from": from_label,
+                            "~type": edge_label,
+                            "~to": to_label
+                        })
+        
         return summary
-
 
     def execute_query(self, cypher, parameters={}):
         logger.info(f"GraphQuery:: {cypher}")
