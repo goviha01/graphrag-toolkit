@@ -437,6 +437,10 @@ class NeptuneDBGraphStore(BaseNeptuneGraphStore):
         """
 
         response = self.neptune_data_client.get_propertygraph_summary(mode='detailed')
+        # When mode is 'detailed', returns nodeStructures and edgeStructures:
+        #    - nodeStructures: List of dicts with 'count', 'nodeProperties', and 'distinctOutgoingEdgeLabels'
+        #    - edgeStructures: List of dicts with 'count' and 'edgeProperties'
+
         logger.info(response)
         summary = response['payload']['graphSummary']
         
