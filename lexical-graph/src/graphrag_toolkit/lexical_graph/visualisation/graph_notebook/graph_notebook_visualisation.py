@@ -523,43 +523,74 @@ class GraphNotebookVisualisation():
         
         formatting_config = '''
         {
-            "physics": {{
-                "simulationDuration": 1500,
-                "disablePhysicsAfterInitialSimulation": false,
-                "minVelocity": 0.75,
-                "barnesHut": {{
-                "centralGravity": 0.3,
-                "gravitationalConstant": -10000,
-                "springLength": 95,
-                "springConstant": 0.04,
-                "damping": 0.09,
-                "avoidOverlap": 0.1
-                }},
-                "solver": "barnesHut",
+          "physics": {
+            "stabilization": {
+              "enabled": true,
+              "iterations": 1
+            },
+            "barnesHut": {
+              "damping": 0.09,
+              "gravitationalConstant": -10000,
+              "springConstant": 0.04,
+              "springLength": 95,
+              "avoidOverlap": 0.1,
+              "centralGravity": 0.3
+            },
+            "enabled": true,
+            "adaptiveTimestep": true,
+            "solver": "barnesHut",
+            "minVelocity": 0.75,
+            "simulationDuration": 1500,
+            "disablePhysicsAfterInitialSimulation": false
+          },
+          "edges": {
+            "smooth": {
+              "enabled": true,
+              "type": "dynamic"
+            },
+            "arrows": {
+              "to": {
                 "enabled": true,
-                "adaptiveTimestep": true,
-                "stabilization": {{
-                "enabled": true,
-                "iterations": 1
-                }}
-            }},
-            "edges": {
-                "color": {
-                "inherit": false
-                },
-                "smooth": {
-                "enabled": true,
-                "type": "dynamic"
-                },
-                "arrows": {
-                "to": {
-                    "enabled": true,
-                    "type": "arrow"
+                "type": "arrow"
+              }
+            },
+            "color": {
+              "inherit": false
+            },
+            "font": {
+              "face": "courier new"
+            }
+          },
+          "interaction": {
+            "hover": true,
+            "hoverConnectedEdges": true,
+            "selectConnectedEdges": false
+          },
+          "nodes": {
+              "borderWidthSelected": 3,
+              "borderWidth": 0,
+              "chosen": true,
+              "color": {
+                "background": "rgba(210, 229, 255, 1)",
+                "border": "transparent",
+                "highlight": {
+                  "background": "rgba(9, 104, 178, 1)",
+                  "border": "rgba(8, 62, 100, 1)"
                 }
-                },
-                "font": {
-                "face": "courier new"
-                }
+              },
+              "shadow": {
+                "enabled": false
+              },
+              "shape": "circle",
+              "widthConstraint": {
+                "minimum": 70,
+                "maximum": 70
+              },
+              "font": {
+                "face": "courier new",
+                "color": "black",
+                "size": 12
+              }
             }
         }
         '''
