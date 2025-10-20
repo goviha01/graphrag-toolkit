@@ -144,7 +144,7 @@ class AgenticRetriever(GRetriever):
 
             # Verbalize and prune triplets
             text_triplets = self.graph_verbalizer.verbalize_merge_triplets(current_entity_relations_list)
-            if len(text_triplets) > self.max_num_triplets:
+            if len(text_triplets) > self.max_num_triplets and self.pruning_reranker is not None:
                 text_triplets, ids = self.pruning_reranker.rerank_input_with_query(
                     query, text_triplets, topk=self.max_num_triplets
                 )
