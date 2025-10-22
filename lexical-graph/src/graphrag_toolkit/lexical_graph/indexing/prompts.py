@@ -1,64 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-DOMAIN_ENTITY_CLASSIFICATIONS_PROMPT = """
-You are an expert system analyzing text to identify domain-specific entity types. Based on the provided text samples and list of existing classifications, identify the 5 most significant entity classifications for this domain.
-
-Guidelines:
-1. Identify the most important specific types of entities that appear in or are relevant to the domain
-2. Reuse existing classifications where possible
-3. Focus on concrete entities, not abstract concepts
-4. DO NOT treat numerical values, dates, times, measurements, or object attributes (e.g. size, colour) as entities
-5. Use clear, concise classification names (1-2 words)
-6. Use the singular, not plural, form for each classification
-7. Aim for 5 classifications
-8. Format each classification as a single word, or multiple words separated by a space
-9. Do not use underscores or any other punctuation
-
-Sample text chunks:
-<chunks>
-{text_chunks}
-</chunks>
-
-Existing classifications:
-<existing_classifications>
-{existing_classifications}
-</existing_classifications>
-
-Output the classifications between entity_classifications tags, one per line.
-
-Expected format:
-<entity_classifications>
-Classification1
-Classification2
-Classification3
-</entity_classifications>
-"""
-
-RANK_ENTITY_CLASSIFICATIONS_PROMPT = """
-You are an expert system analyzing text to rank domain-specific entity types. Order the list of entity classifications below, most important classifications first.
-
-Guidelines:
-1. If the classifications cover multiple domains, choose high-level classifications across domains, rather than going deep into a single domain
-2. Eliminate synonyms
-3. Convert plural forms to the singluar form, if necessary
-4. If you can identify a broader classification that covers several classifications, use the broader classification
-
-Original classifications:
-<classifications>
-{classifications}
-</classifications>
-
-Output the ranked classifications between entity_classifications tags, one per line.
-
-Expected format:
-<entity_classifications>
-Classification1
-Classification2
-Classification3
-</entity_classifications>
-"""
-
 EXTRACT_PROPOSITIONS_PROMPT = """
 You are a top-tier algorithm designed for extracting information in structured formats to build a knowledge graph. Your task is to decompose the given text into clear, concise, and context-independent propositions.
 
@@ -229,4 +171,62 @@ Adhere strictly to the provided instructions. Non-compliance will result in term
 <preferredEntityClassifications>
 {preferred_entity_classifications}
 </preferredEntityClassifications>
+"""
+
+DOMAIN_ENTITY_CLASSIFICATIONS_PROMPT = """
+You are an expert system analyzing text to identify domain-specific entity types. Based on the provided text samples and list of existing classifications, identify the 5 most significant entity classifications for this domain.
+
+Guidelines:
+1. Identify the most important specific types of entities that appear in or are relevant to the domain
+2. Reuse existing classifications where possible
+3. Focus on concrete entities, not abstract concepts
+4. DO NOT treat numerical values, dates, times, measurements, or object attributes (e.g. size, colour) as entities
+5. Use clear, concise classification names (1-2 words)
+6. Use the singular, not plural, form for each classification
+7. Aim for 5 classifications
+8. Format each classification as a single word, or multiple words separated by a space
+9. Do not use underscores or any other punctuation
+
+Sample text chunks:
+<chunks>
+{text_chunks}
+</chunks>
+
+Existing classifications:
+<existing_classifications>
+{existing_classifications}
+</existing_classifications>
+
+Output the classifications between entity_classifications tags, one per line.
+
+Expected format:
+<entity_classifications>
+Classification1
+Classification2
+Classification3
+</entity_classifications>
+"""
+
+RANK_ENTITY_CLASSIFICATIONS_PROMPT = """
+You are an expert system analyzing text to rank domain-specific entity types. Order the list of entity classifications below, most important classifications first.
+
+Guidelines:
+1. If the classifications cover multiple domains, choose high-level classifications across domains, rather than going deep into a single domain
+2. Eliminate synonyms
+3. Convert plural forms to the singluar form, if necessary
+4. If you can identify a broader classification that covers several classifications, use the broader classification
+
+Original classifications:
+<classifications>
+{classifications}
+</classifications>
+
+Output the ranked classifications between entity_classifications tags, one per line.
+
+Expected format:
+<entity_classifications>
+Classification1
+Classification2
+Classification3
+</entity_classifications>
 """
