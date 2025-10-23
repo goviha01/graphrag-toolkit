@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
+import multiprocessing
 from pipe import Pipe
 from typing import List, Optional, Sequence, Dict, Iterable, Any
 
@@ -229,6 +230,10 @@ class ExtractionPipeline():
         num_workers = num_workers or GraphRAGConfig.extraction_num_workers
         batch_size = batch_size or GraphRAGConfig.extraction_batch_size
         include_classification_in_entity_id = include_classification_in_entity_id or GraphRAGConfig.include_classification_in_entity_id
+
+        if num_workers > multiprocessing.cpu_count():
+            num_workers = multiprocessing.cpu_count()
+            logger.debug(f'Setting num_workers to CPU count [num_workers: {num_workers}]')
 
         for c in components:
             if isinstance(c, BaseExtractor):
