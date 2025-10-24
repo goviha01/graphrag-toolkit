@@ -9,7 +9,7 @@ from llama_index.core.schema import NodeRelationship
 from graphrag_toolkit.lexical_graph.indexing.build.build_filters import BuildFilters
 from graphrag_toolkit.lexical_graph.indexing.build.node_builder import NodeBuilder
 from graphrag_toolkit.lexical_graph.indexing.constants import TOPICS_KEY
-from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY
+from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY, VERSIONING_KEY
 
 class ChunkNodeBuilder(NodeBuilder):
     """
@@ -54,7 +54,7 @@ class ChunkNodeBuilder(NodeBuilder):
         """
         return [TOPICS_KEY]
     
-    def build_nodes(self, nodes:List[BaseNode]):
+    def build_nodes(self, nodes:List[BaseNode], **kwargs):
         """
         Constructs and returns a list of processed chunk nodes by iterating through
         a list of input nodes, applying transformations, and filtering metadata.
@@ -68,6 +68,8 @@ class ChunkNodeBuilder(NodeBuilder):
             relationships, and excluded keys for embedding and LLM usage.
         """
         chunk_nodes = []
+
+        versioning_timestamp = kwargs.get('versioning_timestamp', None)
 
         for node in nodes:
 
@@ -102,9 +104,15 @@ class ChunkNodeBuilder(NodeBuilder):
                 'key': self._clean_id(chunk_id)
             }
 
+            if versioning_timestamp:
+                metadata[VERSIONING_KEY] = {
+                    'valid_from': versioning_timestamp,
+                    'valid_to': -1
+                }
+
             chunk_node.metadata = metadata
-            chunk_node.excluded_embed_metadata_keys = [INDEX_KEY, 'chunk', 'source']
-            chunk_node.excluded_llm_metadata_keys = [INDEX_KEY, 'chunk', 'source']
+            chunk_node.excluded_embed_metadata_keys = [INDEX_KEY, VERSIONING_KEY, 'chunk', 'source']
+            chunk_node.excluded_llm_metadata_keys = [INDEX_KEY, VERSIONING_KEY, 'chunk', 'source']
 
             chunk_nodes.append(chunk_node)
 

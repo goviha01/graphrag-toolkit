@@ -179,7 +179,7 @@ class NodeBuilders():
                     if any(key in builder.metadata_keys() for key in node.metadata)
                 ]
                 
-                results.extend(builder.build_nodes(builder_specific_nodes))
+                results.extend(builder.build_nodes(builder_specific_nodes, **kwargs))
             except Exception as e:
                     logger.exception('An error occurred while building nodes from chunks')
                     raise e

@@ -60,7 +60,7 @@ class NodeBuilder(BaseComponent):
         pass
 
     @abc.abstractmethod
-    def build_nodes(self, nodes:List[BaseNode]) -> List[BaseNode]:
+    def build_nodes(self, nodes:List[BaseNode], **kwargs) -> List[BaseNode]:
         """
         Abstract base class for building a list of nodes.
 

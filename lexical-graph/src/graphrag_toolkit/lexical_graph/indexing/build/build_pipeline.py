@@ -4,6 +4,7 @@
 import logging
 import multiprocessing
 import math
+import time
 from typing import Any, List, Optional, Iterable
 from pipe import Pipe
 
@@ -72,7 +73,6 @@ class BuildPipeline():
                include_local_entities:Optional[bool]=None,
                include_classification_in_entity_id:Optional[bool]=None,
                tenant_id:Optional[TenantId]=None,
-               enable_versioning:Optional[bool]=None,
                **kwargs:Any
             ):
         """
@@ -129,8 +129,7 @@ class BuildPipeline():
                 include_domain_labels=include_domain_labels,
                 include_local_entities=include_local_entities,
                 include_classification_in_entity_id=include_classification_in_entity_id,
-                tenant_id=tenant_id,
-                enable_versioning=enable_versioning,
+                tenant_id=tenant_id
                 **kwargs
             ).build
         )
@@ -150,7 +149,6 @@ class BuildPipeline():
                  include_local_entities:Optional[bool]=None,
                  include_classification_in_entity_id:Optional[bool]=None,
                  tenant_id:Optional[TenantId]=None,
-                 enable_versioning:Optional[bool]=None,
                  **kwargs:Any
             ):
         """
@@ -235,7 +233,6 @@ class BuildPipeline():
             )
         )
         self.node_filter = NodeFilter() if not checkpoint else checkpoint.add_filter(NodeFilter(), tenant_id)
-        self.enable_versioning = enable_versioning or GraphRAGConfig.enable_versioning
         self.pipeline_kwargs = kwargs
     
     def _to_node_batches(self, source_doc_batches:Iterable[Iterable[SourceDocument]]) -> List[List[BaseNode]]:
@@ -254,6 +251,8 @@ class BuildPipeline():
             documents.
         """
         results = []
+
+        versioning_timestamp = time.time() * 1000
     
         for source_documents in source_doc_batches:
         
@@ -263,7 +262,7 @@ class BuildPipeline():
             ]
 
             node_batches = [
-                self.node_builders(chunk_nodes) 
+                self.node_builders(chunk_nodes, versioning_timestamp=versioning_timestamp) 
                 for chunk_nodes in chunk_node_batches if chunk_nodes
             ]
 

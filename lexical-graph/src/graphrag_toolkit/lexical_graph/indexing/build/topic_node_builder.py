@@ -9,7 +9,7 @@ from llama_index.core.schema import NodeRelationship
 from graphrag_toolkit.lexical_graph.indexing.build.node_builder import NodeBuilder
 from graphrag_toolkit.lexical_graph.indexing.model import TopicCollection, Topic, Statement
 from graphrag_toolkit.lexical_graph.indexing.constants import TOPICS_KEY
-from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY
+from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY, VERSIONING_KEY
 
 class TopicNodeBuilder(NodeBuilder):
     """
@@ -112,7 +112,7 @@ class TopicNodeBuilder(NodeBuilder):
         return node
 
 
-    def build_nodes(self, nodes:List[BaseNode]):
+    def build_nodes(self, nodes:List[BaseNode], **kwargs):
         """
         Builds a list of topic nodes derived from the provided nodes. This function maps
         chunks and their contained relationships, topics, and statements into structured nodes.
@@ -130,6 +130,8 @@ class TopicNodeBuilder(NodeBuilder):
             associated metadata, statements, and relationships.
         """
         topic_nodes:Dict[str, TextNode] = {}
+
+        versioning_timestamp = kwargs.get('versioning_timestamp', None)
 
         for node in nodes:
 
@@ -166,6 +168,12 @@ class TopicNodeBuilder(NodeBuilder):
                         }
                     }
 
+                    if versioning_timestamp:
+                        metadata[VERSIONING_KEY] = {
+                            'valid_from': versioning_timestamp,
+                            'valid_to': -1
+                        }
+
                     if source_info.metadata:
                         metadata['source']['metadata'] = source_info.metadata
 
@@ -173,8 +181,8 @@ class TopicNodeBuilder(NodeBuilder):
                         id_ = topic_id,
                         text = topic.value,
                         metadata = metadata,
-                        excluded_embed_metadata_keys = [INDEX_KEY, 'topic', 'source'],
-                        excluded_llm_metadata_keys = [INDEX_KEY, 'topic', 'source'],
+                        excluded_embed_metadata_keys = [INDEX_KEY, VERSIONING_KEY, 'topic', 'source'],
+                        excluded_llm_metadata_keys = [INDEX_KEY, VERSIONING_KEY, 'topic', 'source'],
                         text_template='{content}\n\n{metadata_str}',
                         metadata_template='{value}'
                     )

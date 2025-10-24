@@ -8,7 +8,7 @@ from llama_index.core.schema import NodeRelationship
 
 from graphrag_toolkit.lexical_graph.indexing.build.node_builder import NodeBuilder
 from graphrag_toolkit.lexical_graph.indexing.constants import TOPICS_KEY
-from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY
+from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY, VERSIONING_KEY, VIID_FIELD_KEY
 
 class SourceNodeBuilder(NodeBuilder):
     """
@@ -50,7 +50,7 @@ class SourceNodeBuilder(NodeBuilder):
         """
         return [TOPICS_KEY]
     
-    def build_nodes(self, nodes:List[BaseNode]):
+    def build_nodes(self, nodes:List[BaseNode], **kwargs):
         """
         Builds and returns a list of TextNode objects corresponding to source nodes derived
         from the input `nodes`. The constructed nodes contain processed metadata and
@@ -65,6 +65,8 @@ class SourceNodeBuilder(NodeBuilder):
                 relationships and metadata configurations found in the provided `nodes`.
         """
         source_nodes = {}
+
+        versioning_timestamp = kwargs.get('versioning_timestamp', None)
 
         for node in nodes:
             
@@ -86,12 +88,18 @@ class SourceNodeBuilder(NodeBuilder):
                     'index': 'source',
                     'key': self._clean_id(source_id)
                 }
+
+                if versioning_timestamp:
+                    metadata[VERSIONING_KEY] = {
+                        'valid_from': versioning_timestamp,
+                        'valid_to': -1
+                    }
                 
                 source_node = TextNode(
                     id_ = source_id,
                     metadata = metadata,
-                    excluded_embed_metadata_keys = [INDEX_KEY],
-                    excluded_llm_metadata_keys = [INDEX_KEY]
+                    excluded_embed_metadata_keys = [INDEX_KEY, VERSIONING_KEY, VIID_FIELD_KEY],
+                    excluded_llm_metadata_keys = [INDEX_KEY, VERSIONING_KEY, VIID_FIELD_KEY]
                 )
 
                 source_nodes[source_id] = source_node
