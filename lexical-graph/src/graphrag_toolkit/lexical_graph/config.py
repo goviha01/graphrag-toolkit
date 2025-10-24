@@ -48,6 +48,7 @@ DEFAULT_INCLUDE_CLASSIFICATION_IN_ENTITY_ID = True
 DEFAULT_ENABLE_CACHE = False
 DEFAULT_METADATA_DATETIME_SUFFIXES = ['_date', '_datetime']
 DEFAULT_OPENSEARCH_ENGINE = 'nmslib'
+DEFAULT_ENABLE_VERSIONING = False
 
 def _is_json_string(s):
     """
@@ -285,6 +286,7 @@ class _GraphRAGConfig:
     _enable_cache: Optional[bool] = None
     _metadata_datetime_suffixes: Optional[List[str]] = None
     _opensearch_engine: Optional[str] = None
+    _enable_versioning = None
 
     @contextlib.contextmanager
     def _validate_sso_token(self, profile):
@@ -1154,6 +1156,16 @@ class _GraphRAGConfig:
     @opensearch_engine.setter
     def opensearch_engine(self, opensearch_engine: str) -> None:
         self._opensearch_engine = opensearch_engine
+
+    @property
+    def enable_versioning(self) -> bool:
+        if self._enable_versioning is None:
+            self._enable_versioning = string_to_bool(os.environ.get('ENABLE_VERSIONING'), DEFAULT_ENABLE_VERSIONING)
+        return self._enable_versioning
+
+    @enable_versioning.setter
+    def enable_versioning(self, enable_versioning: bool) -> None:
+        self._enable_versioning = enable_versioning
 
 
 GraphRAGConfig = _GraphRAGConfig()
