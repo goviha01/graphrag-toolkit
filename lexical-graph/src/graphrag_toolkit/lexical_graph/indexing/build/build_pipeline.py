@@ -72,6 +72,7 @@ class BuildPipeline():
                include_local_entities:Optional[bool]=None,
                include_classification_in_entity_id:Optional[bool]=None,
                tenant_id:Optional[TenantId]=None,
+               enable_versioning:Optional[bool]=None,
                **kwargs:Any
             ):
         """
@@ -129,6 +130,7 @@ class BuildPipeline():
                 include_local_entities=include_local_entities,
                 include_classification_in_entity_id=include_classification_in_entity_id,
                 tenant_id=tenant_id,
+                enable_versioning=enable_versioning,
                 **kwargs
             ).build
         )
@@ -148,6 +150,7 @@ class BuildPipeline():
                  include_local_entities:Optional[bool]=None,
                  include_classification_in_entity_id:Optional[bool]=None,
                  tenant_id:Optional[TenantId]=None,
+                 enable_versioning:Optional[bool]=None,
                  **kwargs:Any
             ):
         """
@@ -232,6 +235,7 @@ class BuildPipeline():
             )
         )
         self.node_filter = NodeFilter() if not checkpoint else checkpoint.add_filter(NodeFilter(), tenant_id)
+        self.enable_versioning = enable_versioning or GraphRAGConfig.enable_versioning
         self.pipeline_kwargs = kwargs
     
     def _to_node_batches(self, source_doc_batches:Iterable[Iterable[SourceDocument]]) -> List[List[BaseNode]]:
