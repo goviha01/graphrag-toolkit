@@ -30,7 +30,7 @@ class EntityProvider(EntityProviderBase):
             cypher = f"""
             // get entities for keywords
             MATCH (entity:`__Entity__`)-[r:`__SUBJECT__`|`__OBJECT__`]->()
-            WHERE entity.search_str STARTS WITH $keyword and entity.class STARTS WITH $classification
+            WHERE entity.search_str = $keyword and entity.class = $classification
             WITH entity, count(r) AS score ORDER BY score DESC
             RETURN {{
                 {node_result('entity', self.graph_store.node_id('entity.entityId'), properties=['value', 'class'])},
@@ -45,7 +45,7 @@ class EntityProvider(EntityProviderBase):
             cypher = f"""
             // get entities for keywords
             MATCH (entity:`__Entity__`)-[r:`__SUBJECT__`|`__OBJECT__`]->()
-            WHERE entity.search_str STARTS WITH $keyword
+            WHERE entity.search_str = $keyword
             AND entity.class <> '__Local_Entity__'
             WITH entity, count(r) AS score ORDER BY score DESC
             RETURN {{
@@ -59,11 +59,55 @@ class EntityProvider(EntityProviderBase):
 
         results = self.graph_store.execute_query(cypher, params)
 
-        return [
+        entities = [
             ScoredEntity.model_validate(result['result'])
             for result in results
             if result['result']['score'] != 0
         ]
+
+        if not entities:
+            if len(parts) > 1:
+
+                cypher = f"""
+                // get entities for keywords
+                MATCH (entity:`__Entity__`)-[r:`__SUBJECT__`|`__OBJECT__`]->()
+                WHERE entity.search_str STARTS WITH $keyword and entity.class STARTS WITH $classification
+                WITH entity, count(r) AS score ORDER BY score DESC
+                RETURN {{
+                    {node_result('entity', self.graph_store.node_id('entity.entityId'), properties=['value', 'class'])},
+                    score: score
+                }} AS result"""
+
+                params = {
+                    'keyword': search_string_from(parts[0]),
+                    'classification': parts[1]
+                }
+            else:
+                cypher = f"""
+                // get entities for keywords
+                MATCH (entity:`__Entity__`)-[r:`__SUBJECT__`|`__OBJECT__`]->()
+                WHERE entity.search_str STARTS WITH $keyword
+                AND entity.class <> '__Local_Entity__'
+                WITH entity, count(r) AS score ORDER BY score DESC
+                RETURN {{
+                    {node_result('entity', self.graph_store.node_id('entity.entityId'), properties=['value', 'class'])},
+                    score: score
+                }} AS result"""
+
+                params = {
+                    'keyword': search_string_from(parts[0])
+                }
+
+            results = self.graph_store.execute_query(cypher, params)
+
+            entities = [
+                ScoredEntity.model_validate(result['result'])
+                for result in results
+                if result['result']['score'] != 0
+            ]
+
+        return entities
+
                         
     def _get_entities(self, keywords:List[str], query_bundle:QueryBundle)  -> List[ScoredEntity]:
 
