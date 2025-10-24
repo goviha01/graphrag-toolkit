@@ -6,6 +6,7 @@ from typing import Any
 
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
 from graphrag_toolkit.lexical_graph.indexing.build.graph_builder import GraphBuilder
+from graphrag_toolkit.lexical_graph.storage.constants import VERSIONING_KEY
 
 from llama_index.core.schema import BaseNode
 
@@ -60,6 +61,7 @@ class SourceGraphBuilder(GraphBuilder):
             No explicit exceptions are raised, but error handling and logging are done for cases
             where 'sourceId' is missing in the node metadata.
         """
+        versioning_metadata = node.metadata.get(VERSIONING_KEY, None)
         source_metadata = node.metadata.get('source', {})
         source_id = source_metadata.get('sourceId', None)
 
@@ -79,10 +81,14 @@ class SourceGraphBuilder(GraphBuilder):
             metadata_assignments_fns = {}
 
             for k, v in metadata.items():
-                key = k.replace(' ', '_')
+                key = k.strip().replace(' ', '_')
                 value = str(v)
                 clean_metadata[key] = value
                 metadata_assignments_fns[key] = graph_client.property_assigment_fn(key, value)
+
+            if versioning_metadata:
+                clean_metadata['__valid_from'] = versioning_metadata['valid_from']
+                clean_metadata['__valid_to'] = versioning_metadata['valid_to']
 
             def format_assigment(key):
                 assigment = f'params.{key}'
