@@ -7,6 +7,7 @@ from typing import Any, List, Sequence, Optional, Iterable
 from graphrag_toolkit.lexical_graph.indexing import IdGenerator
 from graphrag_toolkit.lexical_graph.indexing.build.checkpoint import DoNotCheckpoint
 from graphrag_toolkit.lexical_graph.indexing.model import SourceDocument
+from graphrag_toolkit.lexical_graph.storage.constants import VIID_FIELD_KEY
 
 from llama_index.core.schema import BaseNode, Document
 from llama_index.core.node_parser import NodeParser
@@ -49,7 +50,7 @@ class IdRewriter(NodeParser, DoNotCheckpoint):
 
         """
         if properties:
-            return ';'.join(sorted([f'{k}:{v}' for k,v in properties.items()]))
+            return ';'.join(sorted([f'{k}:{v}' for k,v in properties.items() if k not in [VIID_FIELD_KEY]]))
         else:
             return default
     
