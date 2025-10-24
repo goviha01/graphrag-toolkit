@@ -31,10 +31,10 @@ def search_string_from(value:str):
         str: The processed string, with patterns removed, extra spaces reduced,
         and converted to lowercase.
     """
-    value = SEARCH_STRING_PATTERN.sub('', value)
+    value = SEARCH_STRING_PATTERN.sub(' ', value)
     while '  ' in value:
         value = value.replace('  ', ' ')
-    return value.lower()
+    return value.lower().strip()
 
 def label_from(value:str):
     """

@@ -1,8 +1,14 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+import logging
 from typing import Dict, Any, List, Callable
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore, Query, QueryTree
+
+BATCH_MAX_ATTEMPTS = 10
+BATCH_MAX_WAIT = 7
+
+logger = logging.getLogger(__name__)
 
 class GraphBatchClient():
     """
@@ -165,9 +171,11 @@ class GraphBatchClient():
         for parameterless_query_batch in parameterless_query_batches:
             parameterless_query_batch = ['// parameterless queries'] + parameterless_query_batch
             query = '\n'.join(parameterless_query_batch)
-            self.graph_client.execute_query_with_retry(query, {}, max_attempts=10, max_wait=5)
+            self.graph_client.execute_query_with_retry(query, {}, max_attempts=BATCH_MAX_ATTEMPTS, max_wait=BATCH_MAX_WAIT)
 
     def _apply_batch_query(self, query, parameters):
+
+        retry_batches = []
 
         deduped_parameters = self._dedup(parameters)
         parameter_chunks = [
@@ -179,7 +187,47 @@ class GraphBatchClient():
             params = {
                 'params': p
             }
-            self.graph_client.execute_query_with_retry(query, params, max_attempts=10, max_wait=5)
+            try:
+                self.graph_client.execute_query_with_retry(query, params, max_attempts=BATCH_MAX_ATTEMPTS, max_wait=BATCH_MAX_WAIT)
+            except Exception as e:
+                logger.debug(f'Batch failed - queuing for retry: [query: {query}, params: {params}]')
+                retry_batches.append((query, params))
+
+        failed_batches = []
+
+        for (query, params) in retry_batches:
+            try:
+                self.graph_client.execute_query_with_retry(query, params, max_attempts=BATCH_MAX_ATTEMPTS, max_wait=BATCH_MAX_WAIT)
+            except Exception as e:
+                logger.debug(f'Retry batch failed - queuing for return: [query: {query}, params: {params}]')
+                failed_batches.append((query, params))
+
+        return failed_batches
+    
+    def _retry_failed_batches(self, failed_batches):
+
+        last_chance_batches = []
+
+        for (query, params) in failed_batches:
+            try:
+                self.graph_client.execute_query_with_retry(query, params, max_attempts=BATCH_MAX_ATTEMPTS, max_wait=BATCH_MAX_WAIT)
+            except Exception as e:
+                logger.debug(f'Retry failed batch failed - queuing for individual writes retry: [query: {query}, params: {params}]')
+                last_chance_batches.append((query, params))
+
+        for (query, params) in last_chance_batches:
+            logger.debug('Splitting failed batch into individual writes retrying')
+            failed_params = params['params']
+            for p in failed_params:
+                single_params = {
+                    'params': [p]
+                }
+                try:
+                    self.graph_client.execute_query_with_retry(query, single_params, max_attempts=BATCH_MAX_ATTEMPTS, max_wait=BATCH_MAX_WAIT)
+                except Exception as e:
+                    logger.error(f'Failed single write: [query: {query}, params: {params}, error: {str(e)}]') 
+                    raise e    
+
 
     def _apply_batch_query_tree(self, query_tree_id, parameters):
 
@@ -200,7 +248,7 @@ class GraphBatchClient():
                     'params': chunk
                 }
 
-                results = self.graph_client.execute_query_with_retry(q, params, max_attempts=10, max_wait=5)
+                results = self.graph_client.execute_query_with_retry(q, params, max_attempts=BATCH_MAX_ATTEMPTS, max_wait=BATCH_MAX_WAIT)
 
                 for r in results:
                     yield r
@@ -223,14 +271,19 @@ class GraphBatchClient():
         Returns:
             list: A list of all nodes resulting from the operations.
         """
+
+        failed_batches = []
+
         for query, parameters in self.batches.items():
 
             if query.startswith('query-tree-'):
                 self._apply_batch_query_tree(query, parameters)
             else:
-                self._apply_batch_query(query, parameters)
+                failed_batches.extend(self._apply_batch_query(query, parameters))
 
         self._apply_parameterless_queries()
+
+        self._retry_failed_batches(failed_batches)
 
         return self.all_nodes
   

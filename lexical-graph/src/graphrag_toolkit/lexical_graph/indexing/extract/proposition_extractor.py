@@ -244,5 +244,6 @@ propositions: {proposition_collection}
                     propositions = json.loads(json.dumps(cleaned))
                 except JSONDecodeError as e:            
                     logger.exception(f'Failed to parse output text as JSON: {output_text}')
+                    raise e
 
         return Propositions(propositions=[p for p in propositions])
