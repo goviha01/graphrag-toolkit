@@ -80,15 +80,20 @@ class SourceGraphBuilder(GraphBuilder):
             clean_metadata = {}
             metadata_assignments_fns = {}
 
+            def accept_k_v(key, value):
+                clean_metadata[key] = value
+                metadata_assignments_fns[key] = graph_client.property_assigment_fn(key, value)
+
             for k, v in metadata.items():
                 key = k.strip().replace(' ', '_')
                 value = str(v)
+                accept_k_v(key, value)
                 clean_metadata[key] = value
                 metadata_assignments_fns[key] = graph_client.property_assigment_fn(key, value)
 
             if versioning_metadata:
-                clean_metadata['__valid_from'] = versioning_metadata['valid_from']
-                clean_metadata['__valid_to'] = versioning_metadata['valid_to']
+                accept_k_v('__valid_from', versioning_metadata['valid_from'])
+                accept_k_v('__valid_to', versioning_metadata['valid_to'])
 
             def format_assigment(key):
                 assigment = f'params.{key}'

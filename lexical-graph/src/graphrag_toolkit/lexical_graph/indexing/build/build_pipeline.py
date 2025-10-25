@@ -129,7 +129,7 @@ class BuildPipeline():
                 include_domain_labels=include_domain_labels,
                 include_local_entities=include_local_entities,
                 include_classification_in_entity_id=include_classification_in_entity_id,
-                tenant_id=tenant_id
+                tenant_id=tenant_id,
                 **kwargs
             ).build
         )
@@ -252,7 +252,7 @@ class BuildPipeline():
         """
         results = []
 
-        versioning_timestamp = time.time() * 1000
+        versioning_timestamp = int(time.time() * 1000)
     
         for source_documents in source_doc_batches:
         
