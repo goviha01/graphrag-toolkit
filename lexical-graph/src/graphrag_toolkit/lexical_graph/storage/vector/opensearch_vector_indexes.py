@@ -944,6 +944,24 @@ class OpenSearchIndex(VectorIndex):
         
         return filtered_nodes
     
+    def update_versioning(self, versioning_timestamp:int, ids:List[str]=[]):
+
+        doc_id_map = self._get_existing_doc_ids_for_ids(ids)
+
+        requests = []
+        update_request = '{ "doc": {"metadata" : {"source" : {"versioning": {"valid_to": ' + str(versioning_timestamp) + '}}}}}'
+
+        for item in doc_id_map.items():
+            for doc_id in item:
+                requests.append(f'{ "update" : {"_id" : "{doc_id}", "_index" : "{self.underlying_index_name}" } }')
+                requests.append(update_request)
+
+        response = self.client._os_client.bulk(body='\n'.join(requests))
+        
+        if response['errors']:
+            logger.error(f'Error while updating versioning info: {str(response)}')
+
+    
     def _get_existing_doc_ids_for_ids(self, ids:List[str]=[]):
    
         query = {

@@ -314,3 +314,6 @@ index: {self.underlying_index_name()}
                 all_results.append(result['result'])
         
         return all_results
+    
+    def update_versioning(self, versioning_timestamp:int, ids:List[str]=[]):
+        return None

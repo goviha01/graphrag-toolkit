@@ -655,3 +655,6 @@ class PGIndex(VectorIndex):
             dbconn.close()
 
         return get_embeddings_results
+    
+    def update_versioning(self, versioning_timestamp:int, ids:List[str]=[]):
+        raise NotImplementedError
