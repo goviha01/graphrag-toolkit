@@ -10,6 +10,7 @@ from typing import List, Sequence, Dict, Any, Optional, Callable
 from urllib.parse import urlparse
 
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig, type_name_for_key_value, format_datetime
+from graphrag_toolkit.lexical_graph.metadata import VALID_FROM, VALID_TO
 from graphrag_toolkit.lexical_graph.config import GraphRAGConfig, EmbeddingType
 from graphrag_toolkit.lexical_graph.storage.vector import VectorIndex, to_embedded_query
 from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY
@@ -17,7 +18,6 @@ from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY
 from llama_index.core.schema import BaseNode, QueryBundle
 from llama_index.core.indices.utils import embed_nodes
 from llama_index.core.vector_stores.types import FilterCondition, FilterOperator, MetadataFilter, MetadataFilters
-
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +143,12 @@ def parse_metadata_filters_recursive(metadata_filters:MetadataFilters) -> str:
             str: A string representation of the metadata filters formatted for database
                 queries.
         """
-        return f"metadata->'source'->'metadata'->>'{key}'"
+        if key == VALID_FROM:
+            return "metadata->'source'->'versioning'->>'valid_from'"
+        elif key == VALID_TO:
+            return "metadata->'source'->'versioning'->>'valid_to'"
+        else:
+            return f"metadata->'source'->'metadata'->>'{key}'"
     
     def to_sql_filter(f: MetadataFilter) -> str:
         """

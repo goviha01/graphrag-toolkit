@@ -9,7 +9,7 @@ from llama_index.core.schema import NodeRelationship, RelatedNodeInfo
 from graphrag_toolkit.lexical_graph.indexing.build.node_builder import NodeBuilder
 from graphrag_toolkit.lexical_graph.indexing.model import TopicCollection
 from graphrag_toolkit.lexical_graph.indexing.constants import TOPICS_KEY, LOCAL_ENTITY_CLASSIFICATION
-from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY, VERSIONING_KEY
+from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY
 from graphrag_toolkit.lexical_graph.indexing.utils.fact_utils import string_complement_to_entity
 
 class StatementNodeBuilder(NodeBuilder):
@@ -135,7 +135,7 @@ class StatementNodeBuilder(NodeBuilder):
                         }
 
                         if versioning_timestamp:
-                            statement_metadata[VERSIONING_KEY] = {
+                            statement_metadata['source']['versioning'] = {
                                 'valid_from': versioning_timestamp,
                                 'valid_to': -1
                             }
@@ -146,8 +146,8 @@ class StatementNodeBuilder(NodeBuilder):
                             id_ = statement_id,
                             text = f'{statement.value}\n\n{statement_details}' if statement_details else statement.value,
                             metadata = statement_metadata,
-                            excluded_embed_metadata_keys = [INDEX_KEY, VERSIONING_KEY, 'statement', 'source'],
-                            excluded_llm_metadata_keys = [INDEX_KEY, VERSIONING_KEY, 'statement', 'source']
+                            excluded_embed_metadata_keys = [INDEX_KEY, 'statement', 'source'],
+                            excluded_llm_metadata_keys = [INDEX_KEY, 'statement', 'source']
                         )
 
                         if prev_statement:

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pydantic import BaseModel, ConfigDict, Field, AliasChoices
-from typing import List, Optional, Union, Dict
+from typing import List, Optional, Union, Dict, Any
 
 class Statement(BaseModel):
     """
@@ -84,6 +84,12 @@ class Topic(BaseModel):
     chunks:List[Chunk]=[]
     statements:List[StatementType]=[]  
 
+class Versioning(BaseModel):
+    model_config = ConfigDict(strict=True)
+
+    valid_from:int = -1
+    valid_to:int = -1
+
 class Source(BaseModel):
     """
     Represents a source entity with a unique identifier and associated metadata.
@@ -101,7 +107,8 @@ class Source(BaseModel):
     model_config = ConfigDict(strict=True)
     
     sourceId:str
-    metadata:Dict[str, str]={}
+    metadata:dict={}
+    versioning:Versioning
 
 SourceType = Union[str, Source]
 

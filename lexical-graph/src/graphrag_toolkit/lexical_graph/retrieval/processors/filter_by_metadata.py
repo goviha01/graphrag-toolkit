@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-from graphrag_toolkit.lexical_graph.metadata import FilterConfig
+from graphrag_toolkit.lexical_graph.metadata import FilterConfig, VALID_TO, VALID_FROM
 from graphrag_toolkit.lexical_graph.retrieval.processors import ProcessorBase, ProcessorArgs
 from graphrag_toolkit.lexical_graph.retrieval.model import SearchResultCollection, SearchResult
 
@@ -49,6 +49,14 @@ class FilterByMetadata(ProcessorBase):
             SearchResultCollection: A collection of filtered search results.
         """
         def filter_search_result(index:int, search_result:SearchResult):
-            return search_result if self.filter_config.filter_source_metadata_dictionary(search_result.source.metadata) else None
+            
+            versioning_metadata = {
+                VALID_FROM:search_result.source.versioning.valid_from,
+                VALID_TO:search_result.source.versioning.valid_to
+            }
+
+            metadata = search_result.source.metadata | versioning_metadata
+
+            return search_result if self.filter_config.filter_source_metadata_dictionary(metadata) else None
 
         return self._apply_to_search_results(search_results, filter_search_result)

@@ -8,6 +8,7 @@ from typing import List, Any, Type, Optional
 from importlib.metadata import version, PackageNotFoundError
 
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig
+from graphrag_toolkit.lexical_graph.metadata import VALID_FROM, VALID_TO
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
 from graphrag_toolkit.lexical_graph.storage.vector.vector_store import VectorStore
 from graphrag_toolkit.lexical_graph.retrieval.query_context import KeywordProvider, KeywordVSSProvider, KeywordNLPProvider, KeywordProviderMode, PassThruKeywordProvider
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_PROCESSORS = [
     DedupResults,
     DisaggregateResults, 
+    RemoveVersioningMetadata,
     FilterByMetadata,               
     PopulateStatementStrs,
     RerankStatements,
@@ -136,7 +138,7 @@ class TraversalBasedBaseRetriever(BaseRetriever):
               -[:`__MENTIONED_IN__`]->(c)
               -[:`__EXTRACTED_FROM__`]->(s)
         WHERE {self.graph_store.node_id("l.statementId")} in $statementIds
-        WITH {{ sourceId: {self.graph_store.node_id("s.sourceId")}, metadata: s{{.*}}}} AS source,
+        WITH {{ sourceId: {self.graph_store.node_id("s.sourceId")}, metadata: properties(s),  versioning: {{valid_from: coalesce(s.{VALID_FROM}, -1), valid_to: coalesce(s.{VALID_TO}, -1)}}  }} AS source,
             t, l, c,
             {{ chunkId: {self.graph_store.node_id("c.chunkId")}, value: NULL }} AS cc, 
             {{ statementId: {self.graph_store.node_id("l.statementId")}, statement: l.value, facts: [], details: l.details, chunkId: {self.graph_store.node_id("c.chunkId")}, score: 0 }} as ll
@@ -309,7 +311,7 @@ class TraversalBasedBaseRetriever(BaseRetriever):
             if isinstance(result, SearchResult):
                 search_results.append(result)
             elif result['result'].get('source', None):
-                search_results.append(SearchResult.model_validate(result['result']) )
+                search_results.append(SearchResult.model_validate(result['result']))
 
         try:
             toolkit_version = f" ({version('graphrag-toolkit-lexical-graph')})"

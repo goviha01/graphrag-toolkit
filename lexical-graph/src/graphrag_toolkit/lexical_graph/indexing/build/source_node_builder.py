@@ -8,7 +8,7 @@ from llama_index.core.schema import NodeRelationship
 
 from graphrag_toolkit.lexical_graph.indexing.build.node_builder import NodeBuilder
 from graphrag_toolkit.lexical_graph.indexing.constants import TOPICS_KEY
-from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY, VERSIONING_KEY, VIID_FIELD_KEY
+from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY, VIID_FIELD_KEY
 
 class SourceNodeBuilder(NodeBuilder):
     """
@@ -83,23 +83,23 @@ class SourceNodeBuilder(NodeBuilder):
                 
                 if source_info.metadata:
                     metadata['source']['metadata'] = self.source_metadata_formatter.format(source_info.metadata)
+
+                if versioning_timestamp:
+                    metadata['source']['versioning'] = {
+                        'valid_from': versioning_timestamp,
+                        'valid_to': -1
+                    }
                     
                 metadata[INDEX_KEY] = {
                     'index': 'source',
                     'key': self._clean_id(source_id)
                 }
 
-                if versioning_timestamp:
-                    metadata[VERSIONING_KEY] = {
-                        'valid_from': versioning_timestamp,
-                        'valid_to': -1
-                    }
-                
                 source_node = TextNode(
                     id_ = source_id,
                     metadata = metadata,
-                    excluded_embed_metadata_keys = [INDEX_KEY, VERSIONING_KEY, VIID_FIELD_KEY],
-                    excluded_llm_metadata_keys = [INDEX_KEY, VERSIONING_KEY, VIID_FIELD_KEY]
+                    excluded_embed_metadata_keys = [INDEX_KEY, VIID_FIELD_KEY],
+                    excluded_llm_metadata_keys = [INDEX_KEY, VIID_FIELD_KEY]
                 )
 
                 source_nodes[source_id] = source_node

@@ -13,6 +13,7 @@ from .format_sources import FormatSources
 from .populate_statement_strs import PopulateStatementStrs
 from .prune_results import PruneResults
 from .prune_statements import PruneStatements
+from .remove_versioning_metadata import RemoveVersioningMetadata
 from .rerank_statements import RerankStatements
 from .rescore_results import RescoreResults
 from .simplify_single_topic_results import SimplifySingleTopicResults

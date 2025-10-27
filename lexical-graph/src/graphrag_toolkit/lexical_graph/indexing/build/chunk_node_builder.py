@@ -9,7 +9,7 @@ from llama_index.core.schema import NodeRelationship
 from graphrag_toolkit.lexical_graph.indexing.build.build_filters import BuildFilters
 from graphrag_toolkit.lexical_graph.indexing.build.node_builder import NodeBuilder
 from graphrag_toolkit.lexical_graph.indexing.constants import TOPICS_KEY
-from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY, VERSIONING_KEY
+from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY
 
 class ChunkNodeBuilder(NodeBuilder):
     """
@@ -98,21 +98,21 @@ class ChunkNodeBuilder(NodeBuilder):
                 
             if source_info.metadata:
                 metadata['source']['metadata'] = source_info.metadata
+
+            if versioning_timestamp:
+                metadata['source']['versioning'] = {
+                    'valid_from': versioning_timestamp,
+                    'valid_to': -1
+                }
             
             metadata[INDEX_KEY] = {
                 'index': 'chunk',
                 'key': self._clean_id(chunk_id)
             }
 
-            if versioning_timestamp:
-                metadata[VERSIONING_KEY] = {
-                    'valid_from': versioning_timestamp,
-                    'valid_to': -1
-                }
-
             chunk_node.metadata = metadata
-            chunk_node.excluded_embed_metadata_keys = [INDEX_KEY, VERSIONING_KEY, 'chunk', 'source']
-            chunk_node.excluded_llm_metadata_keys = [INDEX_KEY, VERSIONING_KEY, 'chunk', 'source']
+            chunk_node.excluded_embed_metadata_keys = [INDEX_KEY, 'chunk', 'source']
+            chunk_node.excluded_llm_metadata_keys = [INDEX_KEY, 'chunk', 'source']
 
             chunk_nodes.append(chunk_node)
 

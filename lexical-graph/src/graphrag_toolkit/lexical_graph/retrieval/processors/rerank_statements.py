@@ -36,6 +36,8 @@ def default_reranking_source_metadata_fn(source:Source):
         str: A string containing the formatted metadata values, joined by commas.
     """
     def format_value(s):
+        if isinstance(s, int) or isinstance(s, float):
+            return str(s)
         try: 
             date = parse(s, fuzzy=False)
             return date.strftime("%B %-d, %Y")
@@ -44,6 +46,8 @@ def default_reranking_source_metadata_fn(source:Source):
                 return ''
             else:
                 return s
+        except TypeError:
+            return str(s)
     return ', '.join([format_value(v) for v in source.metadata.values()])
 
 class RerankStatements(ProcessorBase):

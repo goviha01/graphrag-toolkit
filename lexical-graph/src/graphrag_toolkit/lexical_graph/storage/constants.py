@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 INDEX_KEY = 'aws::graph::index'
-VERSIONING_KEY = 'aws::versioning'
 VIID_FIELD_KEY = 'aws::viid_field'
 ALL_EMBEDDING_INDEXES = ['chunk', 'statement', 'topic']
 DEFAULT_EMBEDDING_INDEXES = ['chunk', 'statement']
@@ -17,3 +16,4 @@ LEXICAL_GRAPH_LABELS = [
     '__SYS_SV__StatementTopic__',
     '__SYS_Class__'
 ]
+
