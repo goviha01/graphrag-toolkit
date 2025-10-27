@@ -6,6 +6,7 @@ import logging
 from typing import List, Optional, Union, Any
 from pipe import Pipe
 
+from graphrag_toolkit.lexical_graph import GraphRAGConfig
 from graphrag_toolkit.lexical_graph.tenant_id import TenantId, TenantIdType, DEFAULT_TENANT_ID, to_tenant_id
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig, SourceMetadataFormatter, DefaultSourceMetadataFormatter, MetadataFiltersType
 from graphrag_toolkit.lexical_graph.storage import GraphStoreFactory, GraphStoreType
@@ -25,6 +26,7 @@ from graphrag_toolkit.lexical_graph.indexing.extract import InferClassifications
 from graphrag_toolkit.lexical_graph.indexing.build import BuildPipeline
 from graphrag_toolkit.lexical_graph.indexing.build import VectorIndexing
 from graphrag_toolkit.lexical_graph.indexing.build import GraphConstruction
+from graphrag_toolkit.lexical_graph.indexing.build import VersionManager
 from graphrag_toolkit.lexical_graph.indexing.build import Checkpoint
 from graphrag_toolkit.lexical_graph.indexing.build import BuildFilters
 from graphrag_toolkit.lexical_graph.indexing.build.null_builder import NullBuilder
@@ -101,7 +103,8 @@ class BuildConfig():
                  build_filters: Optional[BuildFilters] = None,
                  include_domain_labels: Optional[bool] = None,
                  include_local_entities: Optional[bool] = None,
-                 source_metadata_formatter: Optional[SourceMetadataFormatter] = None):
+                 source_metadata_formatter: Optional[SourceMetadataFormatter] = None,
+                 enable_versioning: Optional[bool] = None):
         """
         Initializes an instance of the class. This constructor allows for the optional
         configuration of filters, domain label inclusion, and a metadata formatter.
@@ -122,6 +125,7 @@ class BuildConfig():
         self.include_domain_labels = include_domain_labels
         self.include_local_entities = include_local_entities
         self.source_metadata_formatter = source_metadata_formatter or DefaultSourceMetadataFormatter()
+        self.enable_versioning = enable_versioning
 
 
 class IndexingConfig():
@@ -492,11 +496,20 @@ class LexicalGraphIndex():
 
         build_config = self.indexing_config.build
 
+        enable_versioning =  kwargs.get('enable_versioning', None) or build_config.enable_versioning or GraphRAGConfig.enable_versioning
+
+        components = []
+
+        if enable_versioning:
+            components.append(VersionManager.for_graph_and_vector_store(self.graph_store, self.vector_store))
+
+        components.extend([
+            GraphConstruction.for_graph_store(self.graph_store),
+            VectorIndexing.for_vector_store(self.vector_store)
+        ])
+
         build_pipeline = BuildPipeline.create(
-            components=[
-                GraphConstruction.for_graph_store(self.graph_store),
-                VectorIndexing.for_vector_store(self.vector_store)
-            ],
+            components=components,
             show_progress=show_progress,
             checkpoint=checkpoint,
             build_filters=build_config.build_filters,
@@ -546,12 +559,21 @@ class LexicalGraphIndex():
         )
 
         build_config = self.indexing_config.build
+
+        enable_versioning =  kwargs.get('enable_versioning', None) or build_config.enable_versioning or GraphRAGConfig.enable_versioning
+
+        build_components = []
+
+        if enable_versioning:
+            build_components.append(VersionManager.for_graph_and_vector_store(self.graph_store, self.vector_store))
+
+        build_components.extend([
+            GraphConstruction.for_graph_store(self.graph_store),
+            VectorIndexing.for_vector_store(self.vector_store)
+        ])
         
         build_pipeline = BuildPipeline.create(
-            components=[
-                GraphConstruction.for_graph_store(self.graph_store),
-                VectorIndexing.for_vector_store(self.vector_store)
-            ],
+            components=build_components,
             show_progress=show_progress,
             checkpoint=checkpoint,
             build_filters=build_config.build_filters,

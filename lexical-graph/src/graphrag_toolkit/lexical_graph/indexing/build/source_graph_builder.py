@@ -7,6 +7,7 @@ from typing import Any
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
 from graphrag_toolkit.lexical_graph.indexing.build.graph_builder import GraphBuilder
 from graphrag_toolkit.lexical_graph.metadata import VALID_FROM, VALID_TO
+from graphrag_toolkit.lexical_graph.storage.constants import VIID_FIELD_KEY
 
 from llama_index.core.schema import BaseNode
 
@@ -77,6 +78,8 @@ class SourceGraphBuilder(GraphBuilder):
             ]
 
             metadata = source_metadata.get('metadata', {})
+            if VIID_FIELD_KEY in metadata:
+                del metadata[VIID_FIELD_KEY]
             
             clean_metadata = {}
             metadata_assignments_fns = {}

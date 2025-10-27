@@ -68,7 +68,7 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
                                    retrievers: Optional[List[WeightedTraversalBasedRetrieverType]] = None,
                                    post_processors: Optional[PostProcessorsType] = None,
                                    filter_config: Optional[FilterConfig] = None,
-                                   with_versioning: Optional[bool] = None,
+                                   enable_versioning: Optional[bool] = None,
                                    **kwargs):
         """
         Constructs an instance of LexicalGraphQueryEngine configured for traversal-based search.
@@ -97,10 +97,10 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
                 search, encapsulating all specified stores, retrievers, and configurations.
         """
         tenant_id = to_tenant_id(tenant_id)
-        with_versioning = with_versioning or GraphRAGConfig.enable_versioning
+        enable_versioning = enable_versioning or GraphRAGConfig.enable_versioning
         filter_config = filter_config or FilterConfig()
 
-        if with_versioning:
+        if enable_versioning:
             filter_config = filter_config.with_versioning()
         
         graph_store =  MultiTenantGraphStore.wrap(

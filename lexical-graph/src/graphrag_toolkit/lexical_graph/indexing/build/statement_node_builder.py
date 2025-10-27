@@ -208,8 +208,8 @@ class StatementNodeBuilder(NodeBuilder):
                             fact_node = TextNode( # don't specify id here - each fact node should be indexable because facts can be associated with multiple statements
                                 text = fact_value,
                                 metadata = fact_metadata,
-                                excluded_embed_metadata_keys = [INDEX_KEY, 'fact', 'source'],
-                                excluded_llm_metadata_keys = [INDEX_KEY, 'fact', 'source']
+                                excluded_embed_metadata_keys = [INDEX_KEY, 'fact'],
+                                excluded_llm_metadata_keys = [INDEX_KEY, 'fact']
                             )
 
                             fact_nodes[lookup_id] = fact_node

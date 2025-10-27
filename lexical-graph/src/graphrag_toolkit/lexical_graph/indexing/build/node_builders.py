@@ -11,6 +11,7 @@ from graphrag_toolkit.lexical_graph.indexing.build.source_node_builder import So
 from graphrag_toolkit.lexical_graph.indexing.build.chunk_node_builder import ChunkNodeBuilder
 from graphrag_toolkit.lexical_graph.indexing.build.topic_node_builder import TopicNodeBuilder
 from graphrag_toolkit.lexical_graph.indexing.build.statement_node_builder import StatementNodeBuilder
+from graphrag_toolkit.lexical_graph.storage.constants import VIID_FIELD_KEY
 
 from llama_index.core.schema import BaseNode, NodeRelationship
 
@@ -129,22 +130,29 @@ class NodeBuilders():
         if len(self.builders) == 0:
             return input_nodes
         
+        def clean_relationship_metadata(node):
+            for _, node_info in node.relationships.items():
+                if isinstance(node_info, list):
+                    for n in node_info:
+                        if VIID_FIELD_KEY in n.metadata:
+                            del n.metadata[VIID_FIELD_KEY]
+                       
+                else:
+                    if VIID_FIELD_KEY in node_info.metadata:
+                        del node_info.metadata[VIID_FIELD_KEY]
+           
+            return node
+        
         def apply_tenant_rewrites(node):
             
             node.id_ =  self.id_generator.rewrite_id_for_tenant(node.id_)
 
-            node_relationships = {}
-
-            for rel, node_info in node.relationships.items():
+            for _, node_info in node.relationships.items():
                 if isinstance(node_info, list):
-                    node_info_list = []
                     for n in node_info:
-                        n.node_id = self.id_generator.rewrite_id_for_tenant(n.node_id) 
-                        node_info_list.append(n)
-                    node_relationships[rel] = node_info_list
+                        n.node_id = self.id_generator.rewrite_id_for_tenant(n.node_id)    
                 else:
                     node_info.node_id = self.id_generator.rewrite_id_for_tenant(node_info.node_id)
-                    node_relationships[rel] = node_info
            
             return node
         
@@ -155,6 +163,7 @@ class NodeBuilders():
         def pre_process(node):
             node = clean_text(node)
             node = apply_tenant_rewrites(node)
+            node = clean_relationship_metadata(node)
             return node
 
         results = []

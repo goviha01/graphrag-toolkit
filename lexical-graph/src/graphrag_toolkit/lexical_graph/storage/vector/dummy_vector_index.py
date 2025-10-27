@@ -113,3 +113,6 @@ class DummyVectorIndex(VectorIndex):
         """
         logger.debug(f'[{self.index_name}] get embeddings for ids: {ids}')
         return []
+    
+    def update_versioning(self, versioning_timestamp:int, ids:List[str]=[]):
+        return None

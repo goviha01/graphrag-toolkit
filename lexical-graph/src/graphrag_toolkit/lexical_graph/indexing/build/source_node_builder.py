@@ -89,6 +89,9 @@ class SourceNodeBuilder(NodeBuilder):
                         'valid_from': versioning_timestamp,
                         'valid_to': -1
                     }
+
+                if VIID_FIELD_KEY in node.metadata:
+                    metadata[VIID_FIELD_KEY] = node.metadata[VIID_FIELD_KEY]
                     
                 metadata[INDEX_KEY] = {
                     'index': 'source',
@@ -98,8 +101,8 @@ class SourceNodeBuilder(NodeBuilder):
                 source_node = TextNode(
                     id_ = source_id,
                     metadata = metadata,
-                    excluded_embed_metadata_keys = [INDEX_KEY, VIID_FIELD_KEY],
-                    excluded_llm_metadata_keys = [INDEX_KEY, VIID_FIELD_KEY]
+                    excluded_embed_metadata_keys = [INDEX_KEY, VIID_FIELD_KEY, 'source'],
+                    excluded_llm_metadata_keys = [INDEX_KEY, VIID_FIELD_KEY, 'source']
                 )
 
                 source_nodes[source_id] = source_node

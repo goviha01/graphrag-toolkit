@@ -948,12 +948,14 @@ class OpenSearchIndex(VectorIndex):
 
         doc_id_map = self._get_existing_doc_ids_for_ids(ids)
 
+        logger.debug(f'original_ids: {ids}, doc_id_map: {doc_id_map}')
+
         requests = []
         update_request = '{ "doc": {"metadata" : {"source" : {"versioning": {"valid_to": ' + str(versioning_timestamp) + '}}}}}'
 
-        for item in doc_id_map.items():
+        for item in doc_id_map.values():
             for doc_id in item:
-                requests.append(f'{ "update" : {"_id" : "{doc_id}", "_index" : "{self.underlying_index_name}" } }')
+                requests.append(f'{{ "update" : {{"_id" : "{doc_id}", "_index" : "{self.underlying_index_name()}" }} }}')
                 requests.append(update_request)
 
         response = self.client._os_client.bulk(body='\n'.join(requests))
