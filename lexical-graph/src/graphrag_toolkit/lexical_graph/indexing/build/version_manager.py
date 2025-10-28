@@ -14,6 +14,7 @@ from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory
 from graphrag_toolkit.lexical_graph.storage.constants import DEFAULT_EMBEDDING_INDEXES, INDEX_KEY, VIID_FIELD_KEY
 
 from llama_index.core.schema import BaseNode
+from llama_index.core.utils import iter_batch
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +114,7 @@ class VersionManager(NodeHandler):
 
         return {result['result']['sourceId']:result['result']['nodeIds'] for result in results}
     
-    def _set_source_version_info(self, source_id:str, versioning_timestamp:int):
+    def _set_source_node_version_info(self, source_id:str, versioning_timestamp:int):
 
         cypher = f'''// set version info for source node
         MATCH (s:`__Source__`)
@@ -127,6 +128,18 @@ class VersionManager(NodeHandler):
         }
 
         self.graph_store.execute_query_with_retry(cypher, properties)
+
+    def _update_vector_store_versions(self, source_id:str, node_ids:List[str], versioning_timestamp:int, index:VectorIndex):
+
+        node_id_batches = [
+            node_ids[x:x+100] 
+            for x in range(0, len(node_ids), 100)
+        ]
+
+        logger.debug(f'Updating version info for {source_id} in vector index [index: {index.underlying_index_name()}, batch_sizes: {[len(b) for b in node_id_batches]}, versioning_timestamp: {versioning_timestamp}]')
+
+        for node_id_batch in node_id_batches:
+            index.update_versioning(versioning_timestamp, node_id_batch)
 
 
     def accept(self, nodes: List[BaseNode], **kwargs: Any):
@@ -146,11 +159,10 @@ class VersionManager(NodeHandler):
                             for index in self.vector_store.all_indexes():
                                 node_id_map = self._get_node_ids(index, source_ids)
                                 for source_id, node_ids in node_id_map.items():
-                                    logger.debug(f'Updating version info for {source_id} in vector index [index: {index.underlying_index_name()}, num_embeddings: {len(node_ids)}, versioning_timestamp: {versioning_timestamp}]')
-                                    index.update_versioning(versioning_timestamp, node_ids)
-                                    self._set_source_version_info(source_id, versioning_timestamp)
+                                    self._update_vector_store_versions(source_id, node_ids, versioning_timestamp, index)
+                                    self._set_source_node_version_info(source_id, versioning_timestamp)
+                                node.metadata['source']['prev_versions'] = list(node_id_map.keys())
                         
-
             yield node
 
         

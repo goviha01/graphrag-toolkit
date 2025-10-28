@@ -946,9 +946,20 @@ class OpenSearchIndex(VectorIndex):
     
     def update_versioning(self, versioning_timestamp:int, ids:List[str]=[]):
 
+        allow_refresh = True
         doc_id_map = self._get_existing_doc_ids_for_ids(ids)
 
-        logger.debug(f'original_ids: {ids}, doc_id_map: {doc_id_map}')
+        start = time.time()
+
+        while (len(doc_id_map.keys()) < len(ids)) and allow_refresh:
+            logger.debug('Unable to find documents for all ids in index, waiting 10 seconds')
+            time.sleep(10)
+            doc_id_map = self._get_existing_doc_ids_for_ids(ids)
+            if int(time.time() - start) > 70:
+                allow_refresh = False
+
+        if len(doc_id_map.keys()) < len(ids):
+            logger.warning(f'Unable to find documents for all ids in index after 70 seconds: [ids: {ids}, indexed_ids: {doc_id_map.keys()}]')
 
         requests = []
         update_request = '{ "doc": {"metadata" : {"source" : {"versioning": {"valid_to": ' + str(versioning_timestamp) + '}}}}}'
@@ -958,10 +969,15 @@ class OpenSearchIndex(VectorIndex):
                 requests.append(f'{{ "update" : {{"_id" : "{doc_id}", "_index" : "{self.underlying_index_name()}" }} }}')
                 requests.append(update_request)
 
-        response = self.client._os_client.bulk(body='\n'.join(requests))
+        if requests:
+
+            response = self.client._os_client.bulk(body='\n'.join(requests))
+
+            if response['errors']:
+                logger.error(f'Error while updating versioning info: {str(response)}')
         
-        if response['errors']:
-            logger.error(f'Error while updating versioning info: {str(response)}')
+        else:
+            logger.warning(f'Versioning bulk update request is empty')
 
     
     def _get_existing_doc_ids_for_ids(self, ids:List[str]=[]):

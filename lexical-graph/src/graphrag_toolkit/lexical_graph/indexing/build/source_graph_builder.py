@@ -111,5 +111,26 @@ class SourceGraphBuilder(GraphBuilder):
             
             graph_client.execute_query_with_retry(query, self._to_params(clean_metadata))
 
+            prev_source_ids = source_metadata.get('prev_versions', [])
+
+            if prev_source_ids:
+
+                prev_versions_statements = [
+                    '// insert prev version relations',
+                    'UNWIND $params AS params',
+                    'MATCH (source:`__Source__`), (prev:`__Source__`)',
+                    f"WHERE {graph_client.node_id('source.sourceId')} = params.sourceId AND {graph_client.node_id('prev.sourceId')} IN params.prevSourceIds",
+                    'MERGE (source)-[:`__PREVIOUS_VERSION__`]->(prev)'
+                ]
+
+                prev_versions_properties = {
+                    'sourceId': source_id,
+                    'prevSourceIds': prev_source_ids
+                }
+
+                prev_versions_query = '\n'.join(prev_versions_statements)
+
+                graph_client.execute_query_with_retry(prev_versions_query, self._to_params(prev_versions_properties))
+
         else:
             logger.warning(f'source_id missing from source node [node_id: {node.node_id}]')

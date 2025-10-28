@@ -16,8 +16,9 @@ logger = logging.getLogger(__name__)
 
 MetadataFiltersType = Union[MetadataFilters, MetadataFilter, List[MetadataFilter]]
 
-VALID_FROM = '__aws__versioning__valid_from'
-VALID_TO = '__aws__versioning__valid_to'
+VALID_FROM = '__aws__versioning__valid_from__'
+VALID_TO = '__aws__versioning__valid_to__'
+VERSIONING_FIELDS = '__aws__versioning__fields__'
 
 def is_datetime_key(key):
     """Determines if the given key corresponds to a datetime metadata field.
