@@ -1,15 +1,15 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# SPDX-License-Identifier: Apache-2.0
+import warnings
+from pydantic.warnings import UnsupportedFieldAttributeWarning
+
+warnings.filterwarnings('ignore', category=UnsupportedFieldAttributeWarning)
+warnings.filterwarnings('ignore', message="Can't initialize NVML")
 
 import asyncio
 import llama_index.core.async_utils
 import logging as l
-import warnings
-
-warnings.filterwarnings('ignore', message="Can't initialize NVML")
 
 logger = l.getLogger(__name__)
 
