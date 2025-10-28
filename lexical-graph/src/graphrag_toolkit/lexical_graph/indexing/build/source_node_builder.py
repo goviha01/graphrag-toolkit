@@ -6,9 +6,10 @@ from typing import List
 from llama_index.core.schema import TextNode, BaseNode
 from llama_index.core.schema import NodeRelationship
 
+from graphrag_toolkit.lexical_graph.metadata import VERSIONING_FIELDS
 from graphrag_toolkit.lexical_graph.indexing.build.node_builder import NodeBuilder
 from graphrag_toolkit.lexical_graph.indexing.constants import TOPICS_KEY
-from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY, VIID_FIELD_KEY
+from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY
 
 class SourceNodeBuilder(NodeBuilder):
     """
@@ -90,8 +91,9 @@ class SourceNodeBuilder(NodeBuilder):
                         'valid_to': -1
                     }
 
-                if VIID_FIELD_KEY in node.metadata:
-                    metadata[VIID_FIELD_KEY] = node.metadata[VIID_FIELD_KEY]
+                if VERSIONING_FIELDS in node.metadata:
+                    versioning_fields = node.metadata[VERSIONING_FIELDS]
+                    metadata['source']['versioning']['versioning_fields'] = versioning_fields if isinstance(versioning_fields, list) else [versioning_fields]
                     
                 metadata[INDEX_KEY] = {
                     'index': 'source',
@@ -101,8 +103,8 @@ class SourceNodeBuilder(NodeBuilder):
                 source_node = TextNode(
                     id_ = source_id,
                     metadata = metadata,
-                    excluded_embed_metadata_keys = [INDEX_KEY, VIID_FIELD_KEY, 'source'],
-                    excluded_llm_metadata_keys = [INDEX_KEY, VIID_FIELD_KEY, 'source']
+                    excluded_embed_metadata_keys = [INDEX_KEY, 'source'],
+                    excluded_llm_metadata_keys = [INDEX_KEY, 'source']
                 )
 
                 source_nodes[source_id] = source_node

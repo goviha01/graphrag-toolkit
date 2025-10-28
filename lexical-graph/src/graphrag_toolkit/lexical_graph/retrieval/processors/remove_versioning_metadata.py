@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-from graphrag_toolkit.lexical_graph.metadata import FilterConfig, VALID_FROM, VALID_TO
+from graphrag_toolkit.lexical_graph.metadata import FilterConfig, VALID_FROM, VALID_TO, VERSIONING_FIELDS
 from graphrag_toolkit.lexical_graph.retrieval.processors import ProcessorBase, ProcessorArgs
 from graphrag_toolkit.lexical_graph.retrieval.model import SearchResultCollection, SearchResult, Topic
 
@@ -16,7 +16,7 @@ class RemoveVersioningMetadata(ProcessorBase):
 
         def remove_versioning_info(index:int, search_result:SearchResult):
             
-            for key in [VALID_FROM, VALID_TO]:
+            for key in [VALID_FROM, VALID_TO, VERSIONING_FIELDS]:
                 if key in search_result.source.metadata:
                     del search_result.source.metadata[key]
 

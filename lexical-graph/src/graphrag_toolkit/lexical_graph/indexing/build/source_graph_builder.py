@@ -6,8 +6,7 @@ from typing import Any
 
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
 from graphrag_toolkit.lexical_graph.indexing.build.graph_builder import GraphBuilder
-from graphrag_toolkit.lexical_graph.metadata import VALID_FROM, VALID_TO
-from graphrag_toolkit.lexical_graph.storage.constants import VIID_FIELD_KEY
+from graphrag_toolkit.lexical_graph.metadata import VALID_FROM, VALID_TO, VERSIONING_FIELDS
 
 from llama_index.core.schema import BaseNode
 
@@ -78,8 +77,6 @@ class SourceGraphBuilder(GraphBuilder):
             ]
 
             metadata = source_metadata.get('metadata', {})
-            if VIID_FIELD_KEY in metadata:
-                del metadata[VIID_FIELD_KEY]
             
             clean_metadata = {}
             metadata_assignments_fns = {}
@@ -98,6 +95,8 @@ class SourceGraphBuilder(GraphBuilder):
             if versioning_metadata:
                 accept_k_v(VALID_FROM, versioning_metadata['valid_from'])
                 accept_k_v(VALID_TO, versioning_metadata['valid_to'])
+                if 'versioning_fields' in versioning_metadata:
+                    accept_k_v(VERSIONING_FIELDS, ';'.join(versioning_metadata['versioning_fields']))
 
             def format_assigment(key):
                 assigment = f'params.{key}'

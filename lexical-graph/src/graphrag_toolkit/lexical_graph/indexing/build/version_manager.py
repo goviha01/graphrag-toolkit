@@ -5,13 +5,13 @@ import logging
 from tqdm import tqdm
 from typing import Any, List, Union, Dict
 
-from graphrag_toolkit.lexical_graph.metadata import VALID_TO
+from graphrag_toolkit.lexical_graph.metadata import VALID_TO, VERSIONING_FIELDS
 from graphrag_toolkit.lexical_graph.indexing.node_handler import NodeHandler
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
 from graphrag_toolkit.lexical_graph.storage.graph_store_factory import GraphStoreFactory
 from graphrag_toolkit.lexical_graph.storage.vector import VectorStore, DummyVectorIndex, VectorIndex
 from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory
-from graphrag_toolkit.lexical_graph.storage.constants import DEFAULT_EMBEDDING_INDEXES, INDEX_KEY, VIID_FIELD_KEY
+from graphrag_toolkit.lexical_graph.storage.constants import DEFAULT_EMBEDDING_INDEXES, INDEX_KEY
 
 from llama_index.core.schema import BaseNode
 from llama_index.core.utils import iter_batch
@@ -46,26 +46,32 @@ class VersionManager(NodeHandler):
 
     def _get_source_ids(self, node:BaseNode) -> List[str]:
 
-        viid_field_key = node.metadata.get(VIID_FIELD_KEY, None)
+        versioning_fields = node.metadata.get('source', {}).get('versioning', {}).get('versioning_fields', None)
 
-        if not viid_field_key:
+        if not versioning_fields:
             return []
         
-        viid_field_value = node.metadata.get('source', {}).get('metadata', {}).get(viid_field_key, None)
+        where_clauses = []
+        parameters = {}
 
-        if not viid_field_value:
+        for i, versioning_field in enumerate(versioning_fields):
+            versioning_field_value = node.metadata.get('source', {}).get('metadata', {}).get(versioning_field, None)
+            if versioning_field_value:
+                param_name = f'param{i}'
+                where_clauses.append(f's.{versioning_field} = ${param_name}')
+                parameters[param_name] = versioning_field_value
+
+        if not where_clauses:
             return []
+        
+        where_clause = ' AND '.join(where_clauses)
         
         cypher = f'''// find source node to be versioned
         MATCH (s:`__Source__`)
-        WHERE s.{viid_field_key} = $viid_field_value
+        WHERE {where_clause}
         AND s.{VALID_TO} = -1
         RETURN {self.graph_store.node_id("s.sourceId")} AS sourceId
         '''
-
-        parameters = {
-            'viid_field_value': viid_field_value
-        }
 
         results = self.graph_store.execute_query(cypher, parameters)
 

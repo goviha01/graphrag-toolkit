@@ -4,6 +4,7 @@
 import logging
 from typing import List, Any, Optional
 from graphrag_toolkit.lexical_graph.metadata import SourceMetadataFormatter, DefaultSourceMetadataFormatter
+from graphrag_toolkit.lexical_graph.metadata import VERSIONING_FIELDS
 from graphrag_toolkit.lexical_graph.indexing import IdGenerator
 from graphrag_toolkit.lexical_graph.indexing.build.build_filters import BuildFilters
 from graphrag_toolkit.lexical_graph.indexing.build.node_builder import NodeBuilder
@@ -11,7 +12,6 @@ from graphrag_toolkit.lexical_graph.indexing.build.source_node_builder import So
 from graphrag_toolkit.lexical_graph.indexing.build.chunk_node_builder import ChunkNodeBuilder
 from graphrag_toolkit.lexical_graph.indexing.build.topic_node_builder import TopicNodeBuilder
 from graphrag_toolkit.lexical_graph.indexing.build.statement_node_builder import StatementNodeBuilder
-from graphrag_toolkit.lexical_graph.storage.constants import VIID_FIELD_KEY
 
 from llama_index.core.schema import BaseNode, NodeRelationship
 
@@ -134,12 +134,12 @@ class NodeBuilders():
             for _, node_info in node.relationships.items():
                 if isinstance(node_info, list):
                     for n in node_info:
-                        if VIID_FIELD_KEY in n.metadata:
-                            del n.metadata[VIID_FIELD_KEY]
+                        if VERSIONING_FIELDS in n.metadata:
+                            del n.metadata[VERSIONING_FIELDS]
                        
                 else:
-                    if VIID_FIELD_KEY in node_info.metadata:
-                        del node_info.metadata[VIID_FIELD_KEY]
+                    if VERSIONING_FIELDS in node_info.metadata:
+                        del node_info.metadata[VERSIONING_FIELDS]
            
             return node
         
