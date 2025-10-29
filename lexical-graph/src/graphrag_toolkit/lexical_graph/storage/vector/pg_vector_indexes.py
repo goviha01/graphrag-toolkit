@@ -487,6 +487,9 @@ class PGIndex(VectorIndex):
             'score': round(r[2], 7)
         }
 
+        valid_from = r[3]
+        valid_to = r[4]
+
         metadata_payload = r[1]
         if isinstance(metadata_payload, dict):
             metadata = metadata_payload
@@ -498,6 +501,8 @@ class PGIndex(VectorIndex):
             result[index_name] = metadata[index_name]
             if 'source' in metadata:
                 result['source'] = metadata['source']
+                result['source']['versioning']['valid_from'] = valid_from
+                result['source']['versioning']['valid_to'] = valid_to
         else:
             for k,v in metadata.items():
                 result[k] = v
@@ -528,6 +533,8 @@ class PGIndex(VectorIndex):
         """
         id = r[0]
         value = r[1]
+        valid_from = r[4]
+        valid_to = r[5]
 
         metadata_payload = r[2]
         if isinstance(metadata_payload, dict):
@@ -546,6 +553,10 @@ class PGIndex(VectorIndex):
         for k,v in metadata.items():
             if k != INDEX_KEY:
                 result[k] = v
+
+        if 'source' in result:
+            result['source']['versioning']['valid_from'] = valid_from
+            result['source']['versioning']['valid_to'] = valid_to
             
         return result
     
@@ -586,7 +597,7 @@ class PGIndex(VectorIndex):
 
             query_bundle = to_embedded_query(query_bundle, self.embed_model)
 
-            sql = f'''SELECT {self.index_name}Id, metadata, embedding <-> %s AS score
+            sql = f'''SELECT {self.index_name}Id, metadata, embedding <-> %s AS score, valid_from, valid_to
                 FROM {self.schema_name}.{self.underlying_index_name()}
                 {where_clause}
                 ORDER BY score ASC LIMIT %s;'''
@@ -641,7 +652,7 @@ class PGIndex(VectorIndex):
 
         try:
 
-            cur.execute(f'''SELECT {self.index_name}Id, value, metadata, embedding
+            cur.execute(f'''SELECT {self.index_name}Id, value, metadata, embedding, valid_from, valid_to
                 FROM {self.schema_name}.{self.underlying_index_name()}
                 WHERE {self.index_name}Id IN ({format_ids(ids)});'''
             )
