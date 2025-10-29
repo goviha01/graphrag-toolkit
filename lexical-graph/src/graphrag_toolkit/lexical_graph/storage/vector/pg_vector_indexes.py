@@ -144,9 +144,9 @@ def parse_metadata_filters_recursive(metadata_filters:MetadataFilters) -> str:
                 queries.
         """
         if key == VALID_FROM:
-            return "metadata->'source'->'versioning'->>'valid_from'"
+            return 'valid_from'
         elif key == VALID_TO:
-            return "metadata->'source'->'versioning'->>'valid_to'"
+            return 'valid_to'
         else:
             return f"metadata->'source'->'metadata'->>'{key}'"
     
@@ -373,7 +373,9 @@ class PGIndex(VectorIndex):
                             {self.index_name}Id VARCHAR(255) unique,
                             value text,
                             metadata jsonb,
-                            embedding vector({self.dimensions})
+                            embedding vector({self.dimensions}),
+                            valid_from INTEGER DEFAULT -1,
+                            valid_to INTEGER DEFAULT -1
                             );'''
                         )
                     except UniqueViolation:
@@ -440,9 +442,12 @@ class PGIndex(VectorIndex):
                 nodes, self.embed_model
             )
             for node in nodes:
+
+                valid_from = node.metadata.get('source', {}).get('versioning', {}).get('valid_from', -1) 
+
                 cur.execute(
-                    f'INSERT INTO {self.schema_name}.{self.underlying_index_name()} ({self.index_name}Id, value, metadata, embedding) SELECT %s, %s, %s, %s WHERE NOT EXISTS (SELECT * FROM {self.schema_name}.{self.underlying_index_name()} c WHERE c.{self.index_name}Id = %s);',
-                    (node.id_, node.text,  json.dumps(node.metadata), id_to_embed_map[node.id_], node.id_)
+                    f'INSERT INTO {self.schema_name}.{self.underlying_index_name()} ({self.index_name}Id, value, metadata, embedding, valid_from) SELECT %s, %s, %s, %s, %s WHERE NOT EXISTS (SELECT * FROM {self.schema_name}.{self.underlying_index_name()} c WHERE c.{self.index_name}Id = %s);',
+                    (node.id_, node.text,  json.dumps(node.metadata), id_to_embed_map[node.id_], valid_from, node.id_)
                 )
 
         except UndefinedTable as e:
@@ -657,4 +662,23 @@ class PGIndex(VectorIndex):
         return get_embeddings_results
     
     def update_versioning(self, versioning_timestamp:int, ids:List[str]=[]):
-        raise NotImplementedError
+        
+        dbconn = self._get_connection()
+        cur = dbconn.cursor()
+
+        def format_ids(ids):
+            return ','.join([f"'{id}'" for id in set(ids)])
+        
+        try:
+
+            cur.execute(f'''UPDATE {self.schema_name}.{self.underlying_index_name()}
+                SET valid_to = {versioning_timestamp}
+                WHERE {self.index_name}Id IN ({format_ids(ids)});'''
+            )
+
+        except UndefinedTable as e:
+            logger.warning(f'Index {self.underlying_index_name()} does not exist')
+
+        finally:
+            cur.close()
+            dbconn.close()
