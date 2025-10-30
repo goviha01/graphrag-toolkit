@@ -80,7 +80,7 @@ class StatementNodeBuilder(NodeBuilder):
         statement_nodes = {}
         fact_nodes = {}
 
-        versioning_timestamp = kwargs.get('versioning_timestamp', None)
+        build_timestamp = self._get_build_timestamp(**kwargs)
 
         for node in nodes:
 
@@ -134,11 +134,7 @@ class StatementNodeBuilder(NodeBuilder):
                             }
                         }
 
-                        if versioning_timestamp:
-                            statement_metadata['source']['versioning'] = {
-                                'valid_from': versioning_timestamp,
-                                'valid_to': -1
-                            }
+                        statement_metadata = self._update_metadata_with_versioning_info(statement_metadata, node, build_timestamp)
 
                         statement_details = '\n'.join(statement.details)
 

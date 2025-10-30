@@ -235,7 +235,7 @@ class BuildPipeline():
         self.node_filter = NodeFilter() if not checkpoint else checkpoint.add_filter(NodeFilter(), tenant_id)
         self.pipeline_kwargs = kwargs
     
-    def _to_node_batches(self, source_doc_batches:Iterable[Iterable[SourceDocument]], versioning_timestamp:int) -> List[List[BaseNode]]:
+    def _to_node_batches(self, source_doc_batches:Iterable[Iterable[SourceDocument]], build_timestamp:int) -> List[List[BaseNode]]:
         """
         Converts batches of source documents into batches of nodes based on filtering and
         builder processes. Each batch of source documents is processed individually to form
@@ -260,7 +260,7 @@ class BuildPipeline():
             ]
 
             node_batches = [
-                self.node_builders(chunk_nodes, versioning_timestamp=versioning_timestamp) 
+                self.node_builders(chunk_nodes, build_timestamp=build_timestamp) 
                 for chunk_nodes in chunk_node_batches if chunk_nodes
             ]
 
@@ -293,12 +293,12 @@ class BuildPipeline():
 
         for source_documents in iter_batch(input_source_documents, self.batch_size):
 
-            versioning_timestamp = int(time.time() * 1000)
+            build_timestamp = int(time.time() * 1000)
 
             num_source_docs_per_batch = math.ceil(len(source_documents)/self.num_workers)
             source_doc_batches = iter_batch(source_documents, num_source_docs_per_batch)
             
-            node_batches:List[List[BaseNode]] = self._to_node_batches(source_doc_batches, versioning_timestamp)
+            node_batches:List[List[BaseNode]] = self._to_node_batches(source_doc_batches, build_timestamp)
 
             logger.info(f'Running build pipeline [batch_size: {self.batch_size}, num_workers: {self.num_workers}, job_sizes: {[len(b) for b in node_batches]}, batch_writes_enabled: {self.batch_writes_enabled}, batch_write_size: {self.batch_write_size}]')
 
@@ -311,7 +311,7 @@ class BuildPipeline():
                 batch_write_size=self.batch_write_size,
                 include_domain_labels=self.include_domain_labels,
                 include_local_entities=self.include_local_entities,
-                versioning_timestamp=versioning_timestamp,
+                versioning_timestamp=build_timestamp,
                 **self.pipeline_kwargs
             )
 

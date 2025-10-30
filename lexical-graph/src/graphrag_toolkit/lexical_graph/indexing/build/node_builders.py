@@ -4,7 +4,7 @@
 import logging
 from typing import List, Any, Optional
 from graphrag_toolkit.lexical_graph.metadata import SourceMetadataFormatter, DefaultSourceMetadataFormatter
-from graphrag_toolkit.lexical_graph.metadata import VERSIONING_FIELDS
+from graphrag_toolkit.lexical_graph.metadata import VERSIONING_METADATA_KEYS
 from graphrag_toolkit.lexical_graph.indexing import IdGenerator
 from graphrag_toolkit.lexical_graph.indexing.build.build_filters import BuildFilters
 from graphrag_toolkit.lexical_graph.indexing.build.node_builder import NodeBuilder
@@ -131,16 +131,17 @@ class NodeBuilders():
             return input_nodes
         
         def clean_relationship_metadata(node):
+            def remove_versioning_metadata(n):
+                for k in VERSIONING_METADATA_KEYS:
+                    if k in n.metadata:
+                        del n.metadata[k]
             for _, node_info in node.relationships.items():
                 if isinstance(node_info, list):
                     for n in node_info:
-                        if VERSIONING_FIELDS in n.metadata:
-                            del n.metadata[VERSIONING_FIELDS]
-                       
+                        remove_versioning_metadata(n) 
                 else:
-                    if VERSIONING_FIELDS in node_info.metadata:
-                        del node_info.metadata[VERSIONING_FIELDS]
-           
+                    remove_versioning_metadata(node_info)
+                    
             return node
         
         def apply_tenant_rewrites(node):

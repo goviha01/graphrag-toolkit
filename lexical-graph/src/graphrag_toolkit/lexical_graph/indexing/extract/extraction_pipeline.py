@@ -3,12 +3,14 @@
 
 import logging
 import multiprocessing
+import time
 from pipe import Pipe
 from typing import List, Optional, Sequence, Dict, Iterable, Any
 
 from graphrag_toolkit.lexical_graph import TenantId
 from graphrag_toolkit.lexical_graph.config import GraphRAGConfig
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig
+from graphrag_toolkit.lexical_graph.metadata import EXTRACT_TIMESTAMP
 from graphrag_toolkit.lexical_graph.indexing import IdGenerator
 from graphrag_toolkit.lexical_graph.indexing.utils.pipeline_utils import run_pipeline, node_batcher
 from graphrag_toolkit.lexical_graph.indexing.model import SourceType, SourceDocument, source_documents_from_source_types
@@ -399,8 +401,21 @@ class ExtractionPipeline():
                 num_workers=self.num_workers,
                 **self.pipeline_kwargs
             )
+
+            extract_timestamp = int(time.time() * 1000)
+
+            def add_timestamp(node):
+                if EXTRACT_TIMESTAMP in node.metadata:
+                    return node
+                node.metadata[EXTRACT_TIMESTAMP] = extract_timestamp
+                return node
+
+            timestamped_nodes = [
+                add_timestamp(node)
+                for node in output_nodes
+            ]
   
-            output_source_documents = self._source_documents_from_base_nodes(output_nodes)
+            output_source_documents = self._source_documents_from_base_nodes(timestamped_nodes)
             
             for source_document in output_source_documents:
                 yield self.extraction_decorator.handle_output_doc(source_document)

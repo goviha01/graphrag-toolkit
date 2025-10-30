@@ -18,7 +18,11 @@ MetadataFiltersType = Union[MetadataFilters, MetadataFilter, List[MetadataFilter
 
 VALID_FROM = '__aws__versioning__valid_from__'
 VALID_TO = '__aws__versioning__valid_to__'
+EXTRACT_TIMESTAMP = '__aws__versioning__extract_timestamp__'
+BUILD_TIMESTAMP = '__aws__versioning__build_timestamp__'
 VERSIONING_FIELDS = '__aws__versioning__fields__'
+
+VERSIONING_METADATA_KEYS = [VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSIONING_FIELDS]
 
 def is_datetime_key(key):
     """Determines if the given key corresponds to a datetime metadata field.

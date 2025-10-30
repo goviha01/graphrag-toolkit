@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
-from typing import List
+import time
+from typing import List, Dict, Any
 from llama_index.core.schema import BaseNode, BaseComponent
 
-from graphrag_toolkit.lexical_graph.metadata import SourceMetadataFormatter
+from graphrag_toolkit.lexical_graph.metadata import SourceMetadataFormatter, EXTRACT_TIMESTAMP
 from graphrag_toolkit.lexical_graph.indexing import IdGenerator
 from graphrag_toolkit.lexical_graph.indexing.build.build_filters import BuildFilters
 from graphrag_toolkit.lexical_graph.indexing.constants import DEFAULT_CLASSIFICATION
@@ -118,3 +119,19 @@ class NodeBuilder(BaseComponent):
             A string that represents the fact in the format "subject predicate object".
         """
         return f'{s} {p} {o}'
+    
+    def _get_build_timestamp(self, **kwargs) -> int:
+        return kwargs.get('build_timestamp', int(time.time() * 1000))
+    
+    def _update_metadata_with_versioning_info(self, metadata:Dict[str, Any], node:BaseNode, build_timestamp:int) -> Dict[str, Any]:
+        
+        extract_timestamp = node.metadata.get(EXTRACT_TIMESTAMP, build_timestamp)
+
+        metadata['source']['versioning'] = {
+            'extract_timestamp': extract_timestamp,
+            'build_timestamp': build_timestamp,
+            'valid_from': extract_timestamp,
+            'valid_to': -1
+        }
+
+        return metadata

@@ -131,7 +131,7 @@ class TopicNodeBuilder(NodeBuilder):
         """
         topic_nodes:Dict[str, TextNode] = {}
 
-        versioning_timestamp = kwargs.get('versioning_timestamp', None)
+        build_timestamp = self._get_build_timestamp(**kwargs)
 
         for node in nodes:
 
@@ -171,11 +171,7 @@ class TopicNodeBuilder(NodeBuilder):
                     if source_info.metadata:
                         metadata['source']['metadata'] = source_info.metadata
 
-                    if versioning_timestamp:
-                        metadata['source']['versioning'] = {
-                            'valid_from': versioning_timestamp,
-                            'valid_to': -1
-                        }
+                    metadata = self._update_metadata_with_versioning_info(metadata, node, build_timestamp)
 
                     topic_node = TextNode(
                         id_ = topic_id,
