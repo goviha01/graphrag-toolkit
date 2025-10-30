@@ -2,17 +2,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-
-from typing import List, Optional, Union, Any
+from typing import List, Optional, Union, Any, Dict, overload
 from pipe import Pipe
 
 from graphrag_toolkit.lexical_graph import GraphRAGConfig
 from graphrag_toolkit.lexical_graph.tenant_id import TenantId, TenantIdType, DEFAULT_TENANT_ID, to_tenant_id
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig, SourceMetadataFormatter, DefaultSourceMetadataFormatter, MetadataFiltersType
+from graphrag_toolkit.lexical_graph.metadata import to_filter
+from graphrag_toolkit.lexical_graph.metadata import VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSIONING_METADATA_KEYS
 from graphrag_toolkit.lexical_graph.storage import GraphStoreFactory, GraphStoreType
 from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory, VectorStoreType
 from graphrag_toolkit.lexical_graph.storage.graph import MultiTenantGraphStore
 from graphrag_toolkit.lexical_graph.storage.graph import DummyGraphStore
+from graphrag_toolkit.lexical_graph.storage.graph.graph_utils import filter_config_to_opencypher_filters
 from graphrag_toolkit.lexical_graph.storage.vector import MultiTenantVectorStore
 from graphrag_toolkit.lexical_graph.indexing.extract import BatchConfig
 from graphrag_toolkit.lexical_graph.indexing import NodeHandler
@@ -586,3 +588,71 @@ class LexicalGraphIndex():
 
         sink_fn = sink if not handler else Pipe(handler)
         nodes | extraction_pipeline | build_pipeline | sink_fn
+
+    @overload
+    def get_sources(self, source_id:str=None, order_by:str=None) -> Dict[str, Any]:
+        ...
+    
+    @overload
+    def get_sources(self, source_ids:List[str]=[]) -> Dict[str, Any]:
+        ...
+
+    @overload
+    def get_sources(self, filter:FilterConfig=None) -> Dict[str, Any]:
+        ...
+
+    @overload
+    def get_sources(self, filter:Dict[str, Any]={}) -> Dict[str, Any]:
+        ...
+
+    @overload
+    def get_sources(self, filter:List[Dict[str, Any]]=[]) -> Dict[str, Any]:
+        ...
+
+    def get_sources(self, source_info=None, order_by=None) -> Dict[str, Any]:
+
+        where_clause = ''
+        parameters = {}
+
+        order_by_clause = f'result.metadata.{order_by},' if order_by else ''
+        order_by_clause = f'ORDER BY {order_by_clause} result.versioning.valid_from ASC'
+
+        if source_info:
+
+            if isinstance(source_info, str):
+                source_info = [source_info]
+
+            if isinstance(source_info, list) and isinstance(source_info[0], str):
+                where_clause = f'WHERE {self.graph_store.node_id("source.sourceId")} in $sourceIds'
+                parameters['sourceIds'] = source_info
+            else:
+                source_info = to_filter(source_info)
+                where_clause =  filter_config_to_opencypher_filters(source_info)
+                where_clause = f'WHERE {where_clause}' if where_clause else ''
+
+        cypher = f'''// get source info from source ids
+        MATCH (source:`__Source__`)
+        {where_clause}
+        RETURN {{ 
+            sourceId: {self.graph_store.node_id("source.sourceId")}, 
+            metadata: properties(source), 
+            versioning: {{
+                valid_from: coalesce(source.{VALID_FROM}, -1), 
+                valid_to: coalesce(source.{VALID_TO}, -1),
+                extract_timestamp: coalesce(source.{EXTRACT_TIMESTAMP}, -1),
+                build_timestamp: coalesce(source.{BUILD_TIMESTAMP}, -1)
+            }}  
+        }} AS result {order_by_clause}
+        '''
+
+        results = self.graph_store.execute_query(cypher, parameters)
+
+        def reformat(source):
+            
+            for key in VERSIONING_METADATA_KEYS:
+                if key in source['metadata']:
+                    del source['metadata'][key]
+
+            return source
+
+        return [reformat(result['result']) for result in results]

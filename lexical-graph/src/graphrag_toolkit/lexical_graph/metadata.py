@@ -3,7 +3,7 @@
 
 import logging
 import abc
-from typing import Callable, Any, Dict, List, Optional, Union
+from typing import Callable, Any, Dict, List, Optional, Union, overload
 from dateutil.parser import parse
 from datetime import datetime, date
 
@@ -419,3 +419,52 @@ class DictionaryFilter(BaseModel):
             otherwise, returns False.
         """
         return self._apply_metadata_filters_recursive(self.metadata_filters, metadata)
+    
+FilterType = Union[FilterConfig, List[Dict], Dict]
+
+@overload
+def to_filter(filter:FilterConfig) -> FilterConfig:
+    ...
+
+@overload
+def to_filter(filters:List[Dict]) -> FilterConfig:
+    ...
+
+@overload
+def to_filter(filter:Dict) -> FilterConfig:
+    ...
+
+def to_filter(filter:FilterType) -> FilterConfig:
+    
+    if isinstance(filter, FilterConfig):
+        return filter
+    
+    def to_metadata_filters(d):
+        if isinstance(d, dict):
+            return MetadataFilters(
+                filters = [
+                    MetadataFilter(
+                        key=k, 
+                        value=v, 
+                        operator=FilterOperator.EQ
+                    ) for k,v in d.items()
+                ]
+            )
+        else:
+            raise ValueError(f'Expected dictionary, but received {type(d).__name__}')
+    
+    if isinstance(filter, dict):
+        return FilterConfig(
+            source_filters = to_metadata_filters(filter)
+        )
+    
+    if isinstance(filter, list):
+        return FilterConfig(
+            source_filters = MetadataFilters(
+                filters = [
+                    to_metadata_filters(d)
+                    for d in filter
+                ],
+                condition = FilterCondition.OR
+            )
+        )

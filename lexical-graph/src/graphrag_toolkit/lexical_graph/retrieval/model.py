@@ -89,6 +89,8 @@ class Versioning(BaseModel):
 
     valid_from:int = -1
     valid_to:int = -1
+    extract_timestamp:int = -1
+    build_timestamp:int = -1
 
 class Source(BaseModel):
     """

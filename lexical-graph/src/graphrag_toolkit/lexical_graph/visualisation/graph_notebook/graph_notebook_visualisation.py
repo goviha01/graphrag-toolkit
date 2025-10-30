@@ -6,53 +6,15 @@ import pandas as pd
 import json
 
 from json import JSONDecodeError
-from typing import Optional, List, Union, Dict
+from typing import Optional, List
 
 from graphrag_toolkit.lexical_graph.retrieval.model import SearchResult, EntityContexts
 from graphrag_toolkit.lexical_graph.tenant_id import to_tenant_id
-from graphrag_toolkit.lexical_graph.metadata import FilterConfig
+from graphrag_toolkit.lexical_graph.metadata import to_filter, FilterType
 from graphrag_toolkit.lexical_graph.storage.graph.graph_utils import filter_config_to_opencypher_filters, search_string_from
 
-from llama_index.core.vector_stores.types import FilterCondition, FilterOperator, MetadataFilter, MetadataFilters
 
 LABELS_TO_REFORMAT = ['Source', 'Chunk', 'Topic', 'Statement', 'Fact', 'Entity']
-
-FILTER_TYPE = Union[FilterConfig, List[Dict], Dict]
-
-def to_filter_config(filter:FILTER_TYPE) -> FilterConfig:
-    
-    if isinstance(filter, FilterConfig):
-        return filter
-    
-    def to_metadata_filters(d):
-        if isinstance(d, dict):
-            return MetadataFilters(
-                filters = [
-                    MetadataFilter(
-                        key=k, 
-                        value=v, 
-                        operator=FilterOperator.EQ
-                    ) for k,v in d.items()
-                ]
-            )
-        else:
-            raise ValueError(f'Expected dictionary, but received {type(d).__name__}')
-    
-    if isinstance(filter, dict):
-        return FilterConfig(
-            source_filters = to_metadata_filters(filter)
-        )
-    
-    if isinstance(filter, list):
-        return FilterConfig(
-            source_filters = MetadataFilters(
-                filters = [
-                    to_metadata_filters(d)
-                    for d in filter
-                ],
-                condition = FilterCondition.OR
-            )
-        )
 
 def format_params(params):
     
@@ -206,14 +168,14 @@ def get_schema_query(tenant_id):
 
     return cypher
 
-def get_sources_query(tenant_id, source_ids:Optional[List[str]]=None, filter:Optional[FILTER_TYPE]=None):
+def get_sources_query(tenant_id, source_ids:Optional[List[str]]=None, filter:Optional[FilterType]=None):
 
     label = tenant_id.format_label('__Source__')
     
     where_clauses = []
     
     if filter:
-        where_clauses.append(filter_config_to_opencypher_filters(to_filter_config(filter)))
+        where_clauses.append(filter_config_to_opencypher_filters(to_filter(filter)))
     if source_ids:
         where_clauses.append(f'(id(source) in {str(source_ids)})')
     
@@ -499,7 +461,7 @@ class GraphNotebookVisualisation():
         
         self._display(cypher)
         
-    def display_sources(self, source_ids:Optional[List[str]]=None, filter:Optional[FILTER_TYPE]=None, tenant_id:Optional[str]=None):
+    def display_sources(self, source_ids:Optional[List[str]]=None, filter:Optional[FilterType]=None, tenant_id:Optional[str]=None):
 
         cypher = get_sources_query(to_tenant_id(tenant_id), source_ids, filter)
         

@@ -374,8 +374,8 @@ class PGIndex(VectorIndex):
                             value text,
                             metadata jsonb,
                             embedding vector({self.dimensions}),
-                            valid_from INTEGER DEFAULT -1,
-                            valid_to INTEGER DEFAULT -1
+                            valid_from BIGINT DEFAULT -1,
+                            valid_to BIGINT DEFAULT -1
                             );'''
                         )
                     except UniqueViolation:

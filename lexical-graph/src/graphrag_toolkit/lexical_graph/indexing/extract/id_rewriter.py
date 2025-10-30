@@ -4,7 +4,7 @@
 import uuid
 from typing import Any, List, Sequence, Optional, Iterable
 
-from graphrag_toolkit.lexical_graph.metadata import VERSIONING_FIELDS
+from graphrag_toolkit.lexical_graph.metadata import VERSIONING_METADATA_KEYS
 from graphrag_toolkit.lexical_graph.indexing import IdGenerator
 from graphrag_toolkit.lexical_graph.indexing.build.checkpoint import DoNotCheckpoint
 from graphrag_toolkit.lexical_graph.indexing.model import SourceDocument
@@ -50,7 +50,7 @@ class IdRewriter(NodeParser, DoNotCheckpoint):
 
         """
         if properties:
-            return ';'.join(sorted([f'{k}:{v}' for k,v in properties.items() if k not in [VERSIONING_FIELDS]]))
+            return ';'.join(sorted([f'{k}:{v}' for k,v in properties.items() if k not in [VERSIONING_METADATA_KEYS]]))
         else:
             return default
     
