@@ -8,6 +8,7 @@ from dateutil.parser import parse
 from datetime import datetime, date
 
 from graphrag_toolkit.lexical_graph import GraphRAGConfig
+from graphrag_toolkit.lexical_graph.versioning import VersioningConfig, VALID_FROM, VALID_TO
 
 from llama_index.core.vector_stores.types import FilterCondition, FilterOperator, MetadataFilter, MetadataFilters
 from llama_index.core.bridge.pydantic import BaseModel
@@ -16,15 +17,7 @@ logger = logging.getLogger(__name__)
 
 MetadataFiltersType = Union[MetadataFilters, MetadataFilter, List[MetadataFilter]]
 
-VALID_FROM = '__aws__versioning__valid_from__'
-VALID_TO = '__aws__versioning__valid_to__'
-EXTRACT_TIMESTAMP = '__aws__versioning__extract_timestamp__'
-BUILD_TIMESTAMP = '__aws__versioning__build_timestamp__'
-VERSIONING_FIELDS = '__aws__versioning__fields__'
-
-VERSIONING_METADATA_KEYS = [VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSIONING_FIELDS]
-
-def format_versioning_fields(fields:List[str]) -> str:
+def format_version_independent_id_fields(fields:List[str]) -> str:
     return ';'.join(fields)
 
 def is_datetime_key(key):
@@ -221,12 +214,34 @@ class FilterConfig(BaseModel):
             source_metadata_dictionary_filter_fn=DictionaryFilter(source_filters) if source_filters else lambda x: True
         )
 
-    def with_versioning(self):
-        version_filter = MetadataFilter(
-            key=VALID_TO,
-            value=-1,
-            operator=FilterOperator.EQ
-        )
+    def with_versioning(self, versioning_config:VersioningConfig):
+
+        if not versioning_config.enabled:
+            return self
+        
+        if not versioning_config.at_timestamp or versioning_config.at_timestamp == -1:
+            version_filter = MetadataFilter(
+                key=VALID_TO,
+                value=-1,
+                operator=FilterOperator.EQ
+            )
+        else:
+            version_filter = MetadataFilters(
+                filters = [
+                    MetadataFilter(
+                        key=VALID_FROM,
+                        value=versioning_config.at_timestamp,
+                        operator=FilterOperator.LTE
+                    ),
+                    MetadataFilter(
+                        key=VALID_TO,
+                        value=versioning_config.at_timestamp,
+                        operator=FilterOperator.GTE
+                    )
+                ],
+                condition = FilterCondition.AND
+            )
+
         if not self.source_filters:
             return FilterConfig(version_filter)
         else:
@@ -426,18 +441,18 @@ class DictionaryFilter(BaseModel):
 FilterType = Union[FilterConfig, List[Dict], Dict]
 
 @overload
-def to_filter(filter:FilterConfig) -> FilterConfig:
+def to_metadata_filter(filter:FilterConfig) -> FilterConfig:
     ...
 
 @overload
-def to_filter(filters:List[Dict]) -> FilterConfig:
+def to_metadata_filter(filters:List[Dict]) -> FilterConfig:
     ...
 
 @overload
-def to_filter(filter:Dict) -> FilterConfig:
+def to_metadata_filter(filter:Dict) -> FilterConfig:
     ...
 
-def to_filter(filter:FilterType) -> FilterConfig:
+def to_metadata_filter(filter:FilterType) -> FilterConfig:
     
     if isinstance(filter, FilterConfig):
         return filter

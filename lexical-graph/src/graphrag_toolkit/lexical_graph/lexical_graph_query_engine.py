@@ -9,6 +9,7 @@ from json2xml import json2xml
 from typing import Optional, List, Type, Union
 
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig
+from graphrag_toolkit.lexical_graph.versioning import VersioningConfig
 from graphrag_toolkit.lexical_graph.tenant_id import TenantIdType, to_tenant_id
 from graphrag_toolkit.lexical_graph.config import GraphRAGConfig
 from graphrag_toolkit.lexical_graph.utils import LLMCache, LLMCacheType
@@ -41,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 RetrieverType = Union[BaseRetriever, Type[BaseRetriever]]
 PostProcessorsType = Union[BaseNodePostprocessor, List[BaseNodePostprocessor]]
+EnableVersioningType = Union[bool, VersioningConfig]
 
 
 class LexicalGraphQueryEngine(BaseQueryEngine):
@@ -68,7 +70,7 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
                                    retrievers: Optional[List[WeightedTraversalBasedRetrieverType]] = None,
                                    post_processors: Optional[PostProcessorsType] = None,
                                    filter_config: Optional[FilterConfig] = None,
-                                   enable_versioning: Optional[bool] = None,
+                                   enable_versioning: Optional[EnableVersioningType] = None,
                                    **kwargs):
         """
         Constructs an instance of LexicalGraphQueryEngine configured for traversal-based search.
@@ -97,11 +99,14 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
                 search, encapsulating all specified stores, retrievers, and configurations.
         """
         tenant_id = to_tenant_id(tenant_id)
-        enable_versioning = enable_versioning or GraphRAGConfig.enable_versioning
-        filter_config = filter_config or FilterConfig()
 
-        if enable_versioning:
-            filter_config = filter_config.with_versioning()
+        if enable_versioning is not None:
+            versioning_config = VersioningConfig(enabled=enable_versioning) if isinstance(enable_versioning, bool) else enable_versioning
+        else:
+            versioning_config = VersioningConfig(enabled=GraphRAGConfig.enable_versioning)
+
+        filter_config = filter_config or FilterConfig()
+        filter_config = filter_config.with_versioning(versioning_config)
         
         graph_store =  MultiTenantGraphStore.wrap(
             GraphStoreFactory.for_graph_store(graph_store), 
@@ -146,6 +151,7 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
                                    retrievers: Optional[List[SemanticGuidedRetrieverType]] = None,
                                    post_processors: Optional[PostProcessorsType] = None,
                                    filter_config: FilterConfig = None,
+                                   enable_versioning: Optional[EnableVersioningType] = None,
                                    **kwargs):
         """
         Creates and configures an instance of `LexicalGraphQueryEngine` for semantic-guided
@@ -174,7 +180,14 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
             on the provided graph and vector store.
         """
         tenant_id = to_tenant_id(tenant_id)
+        
+        if enable_versioning is not None:
+            versioning_config = VersioningConfig(enabled=enable_versioning) if isinstance(enable_versioning, bool) else enable_versioning
+        else:
+            versioning_config = VersioningConfig(enabled=GraphRAGConfig.enable_versioning)
+
         filter_config = filter_config or FilterConfig()
+        filter_config = filter_config.with_versioning(versioning_config)
 
         graph_store = MultiTenantGraphStore.wrap(
             GraphStoreFactory.for_graph_store(graph_store),

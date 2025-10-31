@@ -6,7 +6,8 @@ import time
 from typing import List, Dict, Any
 from llama_index.core.schema import BaseNode, BaseComponent
 
-from graphrag_toolkit.lexical_graph.metadata import SourceMetadataFormatter, EXTRACT_TIMESTAMP
+from graphrag_toolkit.lexical_graph.metadata import SourceMetadataFormatter
+from graphrag_toolkit.lexical_graph.versioning import EXTRACT_TIMESTAMP
 from graphrag_toolkit.lexical_graph.indexing import IdGenerator
 from graphrag_toolkit.lexical_graph.indexing.build.build_filters import BuildFilters
 from graphrag_toolkit.lexical_graph.indexing.constants import DEFAULT_CLASSIFICATION

@@ -8,8 +8,8 @@ from pipe import Pipe
 from graphrag_toolkit.lexical_graph import GraphRAGConfig
 from graphrag_toolkit.lexical_graph.tenant_id import TenantId, TenantIdType, DEFAULT_TENANT_ID, to_tenant_id
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig, SourceMetadataFormatter, DefaultSourceMetadataFormatter, MetadataFiltersType
-from graphrag_toolkit.lexical_graph.metadata import to_filter
-from graphrag_toolkit.lexical_graph.metadata import VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSIONING_METADATA_KEYS
+from graphrag_toolkit.lexical_graph.metadata import to_metadata_filter
+from graphrag_toolkit.lexical_graph.versioning import VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSIONING_METADATA_KEYS, VERSION_INDEPENDENT_ID_FIELDS
 from graphrag_toolkit.lexical_graph.storage import GraphStoreFactory, GraphStoreType
 from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory, VectorStoreType
 from graphrag_toolkit.lexical_graph.storage.graph import MultiTenantGraphStore
@@ -626,7 +626,7 @@ class LexicalGraphIndex():
                 where_clause = f'WHERE {self.graph_store.node_id("source.sourceId")} in $sourceIds'
                 parameters['sourceIds'] = source_info
             else:
-                source_info = to_filter(source_info)
+                source_info = to_metadata_filter(source_info)
                 where_clause =  filter_config_to_opencypher_filters(source_info)
                 where_clause = f'WHERE {where_clause}' if where_clause else ''
 
@@ -640,7 +640,8 @@ class LexicalGraphIndex():
                 valid_from: coalesce(source.{VALID_FROM}, -1), 
                 valid_to: coalesce(source.{VALID_TO}, -1),
                 extract_timestamp: coalesce(source.{EXTRACT_TIMESTAMP}, -1),
-                build_timestamp: coalesce(source.{BUILD_TIMESTAMP}, -1)
+                build_timestamp: coalesce(source.{BUILD_TIMESTAMP}, -1),
+                id_fields: split(coalesce(s.{VERSION_INDEPENDENT_ID_FIELDS}, ""), ";")
             }}  
         }} AS result {order_by_clause}
         '''

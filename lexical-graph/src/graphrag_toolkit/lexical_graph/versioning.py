@@ -1,0 +1,30 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+from typing import Dict, Any, Union, List, Optional
+
+VALID_FROM = '__aws__versioning__valid_from__'
+VALID_TO = '__aws__versioning__valid_to__'
+EXTRACT_TIMESTAMP = '__aws__versioning__extract_timestamp__'
+BUILD_TIMESTAMP = '__aws__versioning__build_timestamp__'
+VERSION_INDEPENDENT_ID_FIELDS = '__aws__versioning__id_fields__'
+
+VERSIONING_METADATA_KEYS = [VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSION_INDEPENDENT_ID_FIELDS]
+
+IdFieldsType = Union[str, List[str]]
+
+def add_versioning_info(
+        metadata:Dict[str, Any],
+        id_fields:Optional[IdFieldsType]=None,
+        timestamp:Optional[int]=None
+    ) -> Dict[str, Any]:
+    if id_fields:
+        metadata[VERSION_INDEPENDENT_ID_FIELDS] = id_fields if isinstance(id_fields, list) else [id_fields]
+    if timestamp:
+        metadata[EXTRACT_TIMESTAMP] = timestamp
+    return metadata
+
+class VersioningConfig():
+    def __init__(self, at_timestamp:Optional[int]=None, enabled:Optional[bool]=None):
+        self.at_timestamp = at_timestamp or -1
+        self.enabled = enabled or True

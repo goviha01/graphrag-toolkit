@@ -1,7 +1,8 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-from graphrag_toolkit.lexical_graph.metadata import FilterConfig, VALID_TO, VALID_FROM
+from graphrag_toolkit.lexical_graph.versioning import VALID_TO, VALID_FROM
+from graphrag_toolkit.lexical_graph.metadata import FilterConfig
 from graphrag_toolkit.lexical_graph.retrieval.processors import ProcessorBase, ProcessorArgs
 from graphrag_toolkit.lexical_graph.retrieval.model import SearchResultCollection, SearchResult
 

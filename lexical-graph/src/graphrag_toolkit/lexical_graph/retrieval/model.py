@@ -91,7 +91,7 @@ class Versioning(BaseModel):
     valid_to:int = -1
     extract_timestamp:int = -1
     build_timestamp:int = -1
-    fields:List[str] = []
+    id_fields:List[str] = []
 
 class Source(BaseModel):
     """

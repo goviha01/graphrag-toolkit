@@ -6,7 +6,7 @@ from typing import List
 from llama_index.core.schema import TextNode, BaseNode
 from llama_index.core.schema import NodeRelationship
 
-from graphrag_toolkit.lexical_graph.metadata import VERSIONING_FIELDS
+from graphrag_toolkit.lexical_graph.versioning import VERSION_INDEPENDENT_ID_FIELDS
 from graphrag_toolkit.lexical_graph.indexing.build.node_builder import NodeBuilder
 from graphrag_toolkit.lexical_graph.indexing.constants import TOPICS_KEY
 from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY
@@ -87,9 +87,9 @@ class SourceNodeBuilder(NodeBuilder):
 
                 metadata = self._update_metadata_with_versioning_info(metadata, node, build_timestamp)
 
-                if VERSIONING_FIELDS in node.metadata:
-                    versioning_fields = node.metadata[VERSIONING_FIELDS]
-                    metadata['source']['versioning']['versioning_fields'] = sorted(versioning_fields) if isinstance(versioning_fields, list) else [versioning_fields]
+                if VERSION_INDEPENDENT_ID_FIELDS in node.metadata:
+                    version_independent_id_fields = node.metadata[VERSION_INDEPENDENT_ID_FIELDS]
+                    metadata['source']['versioning']['id_fields'] = sorted(version_independent_id_fields) if isinstance(version_independent_id_fields, list) else [version_independent_id_fields]
                     
                 metadata[INDEX_KEY] = {
                     'index': 'source',

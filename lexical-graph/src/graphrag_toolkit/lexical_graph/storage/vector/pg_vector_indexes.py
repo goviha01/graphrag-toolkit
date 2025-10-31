@@ -10,7 +10,7 @@ from typing import List, Sequence, Dict, Any, Optional, Callable
 from urllib.parse import urlparse
 
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig, type_name_for_key_value, format_datetime
-from graphrag_toolkit.lexical_graph.metadata import VALID_FROM, VALID_TO
+from graphrag_toolkit.lexical_graph.versioning import VALID_FROM, VALID_TO
 from graphrag_toolkit.lexical_graph.config import GraphRAGConfig, EmbeddingType
 from graphrag_toolkit.lexical_graph.storage.vector import VectorIndex, to_embedded_query
 from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY

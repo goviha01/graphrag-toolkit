@@ -6,9 +6,9 @@ from typing import Any
 
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
 from graphrag_toolkit.lexical_graph.indexing.build.graph_builder import GraphBuilder
-from graphrag_toolkit.lexical_graph.metadata import VALID_FROM, VALID_TO, VERSIONING_FIELDS
-from graphrag_toolkit.lexical_graph.metadata import EXTRACT_TIMESTAMP, BUILD_TIMESTAMP
-from graphrag_toolkit.lexical_graph.metadata import format_versioning_fields
+from graphrag_toolkit.lexical_graph.versioning import VALID_FROM, VALID_TO, VERSION_INDEPENDENT_ID_FIELDS
+from graphrag_toolkit.lexical_graph.versioning import EXTRACT_TIMESTAMP, BUILD_TIMESTAMP
+from graphrag_toolkit.lexical_graph.metadata import format_version_independent_id_fields
 
 from llama_index.core.schema import BaseNode
 
@@ -99,8 +99,8 @@ class SourceGraphBuilder(GraphBuilder):
                 accept_k_v(BUILD_TIMESTAMP, versioning_metadata['build_timestamp'])
                 accept_k_v(VALID_FROM, versioning_metadata['valid_from'])
                 accept_k_v(VALID_TO, versioning_metadata['valid_to'])
-                if 'versioning_fields' in versioning_metadata:
-                    accept_k_v(VERSIONING_FIELDS, format_versioning_fields(versioning_metadata['versioning_fields']))
+                if 'id_fields' in versioning_metadata:
+                    accept_k_v(VERSION_INDEPENDENT_ID_FIELDS, format_version_independent_id_fields(versioning_metadata['id_fields']))
 
             def format_assigment(key):
                 assigment = f'params.{key}'

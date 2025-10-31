@@ -10,7 +10,7 @@ from typing import Optional, List
 
 from graphrag_toolkit.lexical_graph.retrieval.model import SearchResult, EntityContexts
 from graphrag_toolkit.lexical_graph.tenant_id import to_tenant_id
-from graphrag_toolkit.lexical_graph.metadata import to_filter, FilterType
+from graphrag_toolkit.lexical_graph.metadata import to_metadata_filter, FilterType
 from graphrag_toolkit.lexical_graph.storage.graph.graph_utils import filter_config_to_opencypher_filters, search_string_from
 
 
@@ -175,7 +175,7 @@ def get_sources_query(tenant_id, source_ids:Optional[List[str]]=None, filter:Opt
     where_clauses = []
     
     if filter:
-        where_clauses.append(filter_config_to_opencypher_filters(to_filter(filter)))
+        where_clauses.append(filter_config_to_opencypher_filters(to_metadata_filter(filter)))
     if source_ids:
         where_clauses.append(f'(id(source) in {str(source_ids)})')
     
