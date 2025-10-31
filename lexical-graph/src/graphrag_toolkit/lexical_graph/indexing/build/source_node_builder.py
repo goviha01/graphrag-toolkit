@@ -89,7 +89,7 @@ class SourceNodeBuilder(NodeBuilder):
 
                 if VERSIONING_FIELDS in node.metadata:
                     versioning_fields = node.metadata[VERSIONING_FIELDS]
-                    metadata['source']['versioning']['versioning_fields'] = versioning_fields if isinstance(versioning_fields, list) else [versioning_fields]
+                    metadata['source']['versioning']['versioning_fields'] = sorted(versioning_fields) if isinstance(versioning_fields, list) else [versioning_fields]
                     
                 metadata[INDEX_KEY] = {
                     'index': 'source',

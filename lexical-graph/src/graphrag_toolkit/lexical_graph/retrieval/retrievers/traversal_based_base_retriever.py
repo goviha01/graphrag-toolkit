@@ -8,7 +8,7 @@ from typing import List, Any, Type, Optional
 from importlib.metadata import version, PackageNotFoundError
 
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig
-from graphrag_toolkit.lexical_graph.metadata import VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP
+from graphrag_toolkit.lexical_graph.metadata import VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSIONING_FIELDS
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
 from graphrag_toolkit.lexical_graph.storage.vector.vector_store import VectorStore
 from graphrag_toolkit.lexical_graph.retrieval.query_context import KeywordProvider, KeywordVSSProvider, KeywordNLPProvider, KeywordProviderMode, PassThruKeywordProvider
@@ -145,7 +145,8 @@ class TraversalBasedBaseRetriever(BaseRetriever):
                     valid_from: coalesce(s.{VALID_FROM}, -1), 
                     valid_to: coalesce(s.{VALID_TO}, -1),
                     extract_timestamp: coalesce(s.{EXTRACT_TIMESTAMP}, -1),
-                    build_timestamp: coalesce(s.{BUILD_TIMESTAMP}, -1)
+                    build_timestamp: coalesce(s.{BUILD_TIMESTAMP}, -1),
+                    fields: split(coalesce(s.{VERSIONING_FIELDS}, ""), ";")
                 }}  
             }} AS source,
             t, l, c,

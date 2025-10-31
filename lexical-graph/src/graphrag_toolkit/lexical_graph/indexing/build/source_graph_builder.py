@@ -8,6 +8,7 @@ from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
 from graphrag_toolkit.lexical_graph.indexing.build.graph_builder import GraphBuilder
 from graphrag_toolkit.lexical_graph.metadata import VALID_FROM, VALID_TO, VERSIONING_FIELDS
 from graphrag_toolkit.lexical_graph.metadata import EXTRACT_TIMESTAMP, BUILD_TIMESTAMP
+from graphrag_toolkit.lexical_graph.metadata import format_versioning_fields
 
 from llama_index.core.schema import BaseNode
 
@@ -99,7 +100,7 @@ class SourceGraphBuilder(GraphBuilder):
                 accept_k_v(VALID_FROM, versioning_metadata['valid_from'])
                 accept_k_v(VALID_TO, versioning_metadata['valid_to'])
                 if 'versioning_fields' in versioning_metadata:
-                    accept_k_v(VERSIONING_FIELDS, ';'.join(versioning_metadata['versioning_fields']))
+                    accept_k_v(VERSIONING_FIELDS, format_versioning_fields(versioning_metadata['versioning_fields']))
 
             def format_assigment(key):
                 assigment = f'params.{key}'

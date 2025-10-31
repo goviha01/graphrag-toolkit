@@ -24,6 +24,9 @@ VERSIONING_FIELDS = '__aws__versioning__fields__'
 
 VERSIONING_METADATA_KEYS = [VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSIONING_FIELDS]
 
+def format_versioning_fields(fields:List[str]) -> str:
+    return ';'.join(fields)
+
 def is_datetime_key(key):
     """Determines if the given key corresponds to a datetime metadata field.
 
