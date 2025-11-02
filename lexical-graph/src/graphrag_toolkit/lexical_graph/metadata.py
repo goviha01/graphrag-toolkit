@@ -231,12 +231,12 @@ class FilterConfig(BaseModel):
                     MetadataFilter(
                         key=VALID_FROM,
                         value=versioning_config.at_timestamp,
-                        operator=FilterOperator.LTE
+                        operator=FilterOperator.GTE
                     ),
                     MetadataFilter(
                         key=VALID_TO,
                         value=versioning_config.at_timestamp,
-                        operator=FilterOperator.GTE
+                        operator=FilterOperator.LT
                     )
                 ],
                 condition = FilterCondition.AND
