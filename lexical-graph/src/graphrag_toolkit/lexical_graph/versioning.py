@@ -16,12 +16,12 @@ IdFieldsType = Union[str, List[str]]
 def add_versioning_info(
         metadata:Dict[str, Any],
         id_fields:Optional[IdFieldsType]=None,
-        timestamp:Optional[int]=None
+        valid_from:Optional[int]=None
     ) -> Dict[str, Any]:
     if id_fields:
         metadata[VERSION_INDEPENDENT_ID_FIELDS] = id_fields if isinstance(id_fields, list) else [id_fields]
-    if timestamp:
-        metadata[EXTRACT_TIMESTAMP] = timestamp
+    if valid_from:
+        metadata[VALID_FROM] = valid_from
     return metadata
 
 class VersioningConfig():
