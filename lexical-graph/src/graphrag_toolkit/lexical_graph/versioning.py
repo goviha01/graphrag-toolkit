@@ -27,4 +27,9 @@ def add_versioning_info(
 class VersioningConfig():
     def __init__(self, at_timestamp:Optional[int]=None, enabled:Optional[bool]=None):
         self.at_timestamp = at_timestamp or -1
-        self.enabled = enabled or True
+        if enabled is not None:
+            self.enabled = enabled
+        elif at_timestamp is not None:
+            self.enabled = True
+        else:
+            self.enabled = False

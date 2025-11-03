@@ -4,7 +4,7 @@
 import logging
 import time
 from tqdm import tqdm
-from typing import Any, List, Union, Dict
+from typing import Any, List, Union, Dict, Tuple
 
 from graphrag_toolkit.lexical_graph.versioning import VALID_FROM, VALID_TO, VERSION_INDEPENDENT_ID_FIELDS
 from graphrag_toolkit.lexical_graph.metadata import format_version_independent_id_fields, to_metadata_filter
@@ -48,7 +48,8 @@ class VersionManager(NodeHandler):
     graph_store: GraphStore 
     vector_store: VectorStore
 
-    def _get_other_source_versions(self, version_independent_id_fields:List[str], node:BaseNode) -> List[Dict[str, Any]]:
+
+    def _get_existing_source_nodes(self, version_independent_id_fields:List[str], node:BaseNode) -> List[Dict[str, Any]]:
         
         if not version_independent_id_fields:
             return []
@@ -75,7 +76,7 @@ class VersionManager(NodeHandler):
             source_id: {self.graph_store.node_id("source.sourceId")},
             valid_from: coalesce(source.{VALID_FROM}, -1),
             valid_to: coalesce(source.{VALID_TO}, -1)
-        }} AS result
+        }} AS result ORDER BY result.valid_from DESC
         '''
 
         parameters = {
@@ -129,6 +130,47 @@ class VersionManager(NodeHandler):
 
         return {result['result']['sourceId']:result['result']['nodeIds'] for result in results}
     
+    def _get_updates(self, new_source_node:Dict[str, Any], existing_source_nodes:List[Dict[str, Any]]) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+
+        # order existing source nodes, most recent first
+        sorted_existing_source_nodes = sorted(existing_source_nodes, key=lambda item:item['valid_from'], reverse=True)
+
+        prev_valid_from = None
+        adjustments = []
+
+        for n in sorted_existing_source_nodes:
+            if new_source_node['valid_from'] == n['valid_from']:
+                # same valid_from as existing node, so ensure same valid_to as existing node
+                new_source_node['valid_to'] = n['valid_to']
+            elif new_source_node['valid_from'] > n['valid_from']:
+                # newer than existing node, so update valid_to
+                new_source_node['valid_to'] = prev_valid_from
+            else:
+                prev_valid_from = n['valid_from']
+
+        if not new_source_node['valid_to']:   
+            if prev_valid_from:
+                # new node is the earliest, so set valid_to based to prev earliest 
+                new_source_node['valid_to'] = prev_valid_from
+            else:
+                # new node is the latest
+                new_source_node['valid_to'] = -1
+            
+                
+        if new_source_node['valid_to'] == -1:
+            # latest source node, so archive previous latest source nodes
+            for n in sorted_existing_source_nodes:
+                if new_source_node['valid_from'] > n['valid_from'] and n['valid_to'] == -1:
+                    adjustments.append({'source_id':n['source_id'], 'valid_from':n['valid_from'], 'valid_to':new_source_node['valid_from']})
+        else:
+            # is historical source node, so insert into timeline, adjusting other historical nodes as necessary
+            for n in sorted_existing_source_nodes:
+                if new_source_node['valid_from'] > n['valid_from'] and new_source_node['valid_from'] < n['valid_to'] and new_source_node['valid_to'] >= n['valid_to']:
+                    adjustments.append({'source_id':n['source_id'], 'valid_from':n['valid_from'], 'valid_to':new_source_node['valid_from']})
+
+        return (new_source_node, adjustments)
+
+    
     def _set_source_node_version_info(self, source_id:str, versioning_timestamp:int, version_independent_id_fields:List[str]):
 
         cypher = f'''// set version info for old source node
@@ -157,42 +199,6 @@ class VersionManager(NodeHandler):
         for node_id_batch in node_id_batches:
             index.update_versioning(versioning_timestamp, node_id_batch)
 
-
-    def _is_latest(self, extract_timestamp:int, other_source_versions:List[Dict[str, Any]]) -> bool:
-
-        for other_source_version in other_source_versions:
-            if other_source_version['valid_from'] > extract_timestamp:
-                return False
-            
-        return True
-    
-    def _get_lowest_valid_from(self, extract_timestamp:int, other_source_versions:List[Dict[str, Any]]) -> int:
-
-        lowest_valid_from = None
-
-        for other_source_version in other_source_versions:
-            if other_source_version['valid_from'] > extract_timestamp:
-                if not lowest_valid_from or other_source_version['valid_from'] < lowest_valid_from:
-                    lowest_valid_from = other_source_version['valid_from']
-        
-        return lowest_valid_from or -1
-    
-    def _get_adjusted_previous_versions(self, extract_timestamp:int, other_source_versions:List[Dict[str, Any]]) -> Dict[str, int]:
-
-        updateable_older_version_id = None
-        updateable_older_version_valid_from = None
-
-        for other_source_version in other_source_versions:
-            if other_source_version['valid_from'] < extract_timestamp and other_source_version['valid_to'] > -1:
-                if not updateable_older_version_valid_from or other_source_version['valid_from'] > updateable_older_version_valid_from:
-                    updateable_older_version_id = other_source_version['source_id']
-                    updateable_older_version_valid_from = other_source_version['valid_from']
-
-        if updateable_older_version_id:
-            return { updateable_older_version_id: extract_timestamp }
-        else:
-            return {}
-    
     def accept(self, nodes: List[BaseNode], **kwargs: Any):
         
         node_iterable = nodes if not self.show_progress else tqdm(nodes, desc='Applying version updates')
@@ -207,42 +213,31 @@ class VersionManager(NodeHandler):
 
                 if index_name == 'source':
 
-                    previous_versions:Dict[str, int] = {}
-
                     source_id = node.metadata['source']['sourceId']
-                    extract_timestamp = node.metadata['source']['versioning']['extract_timestamp']
+                    versioning_timestamp = node.metadata['source']['versioning'].get('valid_from', 'extract_timestamp')
                     version_independent_id_fields = node.metadata.get('source', {}).get('versioning', {}).get('id_fields', None)
 
-                    other_source_versions = self._get_other_source_versions(version_independent_id_fields, node)
+                    new_source_node = {'source_id': source_id, 'valid_from': versioning_timestamp, 'valid_to': None}
+                    existing_source_nodes = self._get_existing_source_nodes(version_independent_id_fields, node)
 
-                    if self._is_latest(extract_timestamp, other_source_versions):
-                        previous_versions.update({
-                            other_source_version['source_id']:extract_timestamp
-                            for other_source_version in other_source_versions 
-                            if other_source_version['valid_to'] == -1
-                        })
-                    else:
-                        lowest_valid_from = self._get_lowest_valid_from(extract_timestamp, other_source_versions)
-                        logger.debug(f'Source is not the latest version, setting valid_to version info [source_id: {source_id}, valid_to: {lowest_valid_from}]')
-                        node.metadata['source']['versioning']['valid_to'] = lowest_valid_from
+                    logger.debug(f'Begin versioning source node [new_source_node: {new_source_node}, existing_source_nodes: {existing_source_nodes}]')
 
-                    previous_versions.update(self._get_adjusted_previous_versions(extract_timestamp, other_source_versions))
+                    (source_node, other_source_nodes) = self._get_updates(new_source_node, existing_source_nodes)
 
-                    for source_id, valid_to in previous_versions.items():
+                    logger.debug(f'Proposed versioning changes [source_node: {source_node}, other_source_nodes: {other_source_nodes}]')
+
+                    node.metadata['source']['versioning']['valid_from'] = source_node['valid_from']
+                    node.metadata['source']['versioning']['valid_to'] = source_node['valid_to']
+
+                    source_version_info[source_id] = source_node
+
+                    for other_source_node in other_source_nodes:
+                        valid_to = other_source_node['valid_to']
                         for index in self.vector_store.all_indexes():
-                            node_id_map = self._get_node_ids(index, [source_id])
-                            for source_id, node_ids in node_id_map.items():
-                                self._update_vector_store_versions(source_id, node_ids, valid_to, index)
-                                self._set_source_node_version_info(source_id, valid_to, version_independent_id_fields)
-                    
-                    node.metadata['source']['previous_versions'] = list(previous_versions.keys())
-
-                    source_version_info[source_id] = {
-                        'valid_from': node.metadata['source']['versioning']['valid_from'],
-                        'valid_to': node.metadata['source']['versioning']['valid_to']
-                    }
-
-                    logger.debug(f'Source version info [source_id: {source_id}, version_info: {source_version_info[source_id]}]')
+                            node_id_map = self._get_node_ids(index, [other_source_node['source_id']])
+                            for other_source_id, node_ids in node_id_map.items():
+                                self._update_vector_store_versions(other_source_id, node_ids, valid_to, index)
+                                self._set_source_node_version_info(other_source_id, valid_to, version_independent_id_fields)
 
                 else:
 
