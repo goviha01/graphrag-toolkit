@@ -30,6 +30,10 @@ except ImportError as e:
         "psycopg2 and/or pgvector packages not found, install with 'pip install psycopg2-binary pgvector'"
     ) from e
     
+def _type_name_for_key_value(key: str, value: Any) -> str:
+    type_name = type_name_for_key_value(key, value)
+    return 'bigint' if type_name == 'int' else type_name
+    
 
 def to_sql_operator(operator: FilterOperator) -> tuple[str, Callable[[Any], str]]:
     """
@@ -97,7 +101,7 @@ def formatter_for_type(type_name:str) -> Callable[[Any], str]:
         return lambda x: f"'{x}'"
     elif type_name == 'timestamp':
         return lambda x: f"'{format_datetime(x)}'"
-    elif type_name in ['int', 'float']:
+    elif type_name in ['bigint', 'int', 'float']:
         return lambda x:x
     else:
         raise ValueError(f'Unsupported type name: {type_name}')
@@ -173,7 +177,7 @@ def parse_metadata_filters_recursive(metadata_filters:MetadataFilters) -> str:
         if f.operator == FilterOperator.IS_EMPTY:
             return f"({key} {operator})"
         else:
-            type_name = type_name_for_key_value(f.key, f.value)
+            type_name = _type_name_for_key_value(f.key, f.value)
             type_formatter = formatter_for_type(type_name)
             return f"(({key})::{type_name} {operator} {type_formatter(operator_formatter(str(f.value)))})"
     

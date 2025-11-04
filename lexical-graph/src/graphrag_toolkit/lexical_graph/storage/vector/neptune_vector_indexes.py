@@ -257,7 +257,7 @@ index: {self.underlying_index_name()}
         )
         YIELD node, score       
         WITH node as {self.index_name}, score WHERE '{tenant_specific_label}' in labels({self.index_name}) 
-        WITH {self.index_name}, score ORDER BY score ASC LIMIT {top_k}
+        WITH {self.index_name}, score ORDER BY score ASC
         MATCH {self.path}
         {where_clause}
         RETURN {{

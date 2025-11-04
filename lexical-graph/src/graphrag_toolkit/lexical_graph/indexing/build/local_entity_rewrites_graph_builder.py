@@ -65,7 +65,7 @@ class LocalEntityRewritesGraphBuilder(GraphBuilder):
                     query=f"""// get complements matching subject (fact.subject)
                     UNWIND $params AS params
                     MATCH (n),
-                    (c:`__Entity__multihop5__`{{search_str: n.search_str, class: '{LOCAL_ENTITY_CLASSIFICATION}'}})
+                    (c:`__Entity__`{{search_str: n.search_str, class: '{LOCAL_ENTITY_CLASSIFICATION}'}})
                     WHERE {graph_client.node_id('n.entityId')} = params.nId AND n.class <> '{LOCAL_ENTITY_CLASSIFICATION}'
                     RETURN {graph_client.node_id('n.entityId')} AS n_id, {graph_client.node_id('c.entityId')} AS c_id
                     """,

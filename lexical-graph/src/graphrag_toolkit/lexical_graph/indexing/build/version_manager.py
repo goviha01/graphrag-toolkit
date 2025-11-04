@@ -96,27 +96,30 @@ class VersionManager(NodeHandler):
             cypher = f'''// get chunk ids to be versioned
             MATCH (s)<-[:`__EXTRACTED_FROM__`]-(c)
             WHERE {self.graph_store.node_id("s.sourceId")} IN $sourceIds
+            WITH {self.graph_store.node_id("s.sourceId")} as source_id, collect({self.graph_store.node_id("c.chunkId")}) as node_ids
             RETURN {{
-                sourceId: {self.graph_store.node_id("s.sourceId")},
-                nodeIds: collect({self.graph_store.node_id("c.chunkId")})
+                sourceId: source_id,
+                nodeIds: node_ids
             }} AS result
             '''
         elif index.index_name == 'topic':
             cypher = f'''// get topic ids to be versioned
             MATCH (s)<-[:`__EXTRACTED_FROM__`]-()<-[:`__MENTIONED_IN__`]-(t)
             WHERE {self.graph_store.node_id("s.sourceId")} IN $sourceIds
+            WITH {self.graph_store.node_id("s.sourceId")} as source_id, collect({self.graph_store.node_id("t.topicId")}) as node_ids
             RETURN {{
-                sourceId: {self.graph_store.node_id("s.sourceId")},
-                nodeIds: collect({self.graph_store.node_id("t.topicId")})
+                sourceId: source_id,
+                nodeIds: node_ids
             }} AS result
             '''
         elif index.index_name == 'statement':
             cypher = f'''// get topic ids to be versioned
             MATCH (s)<-[:`__EXTRACTED_FROM__`]-()<-[:`__MENTIONED_IN__`]-()<-[:`__BELONGS_TO__`]-(l)
             WHERE {self.graph_store.node_id("s.sourceId")} IN $sourceIds
+            WITH {self.graph_store.node_id("s.sourceId")} as source_id, collect({self.graph_store.node_id("l.statementId")}) as node_ids
             RETURN {{
-                sourceId: {self.graph_store.node_id("s.sourceId")},
-                nodeIds: collect({self.graph_store.node_id("l.statementId")})
+                sourceId: source_id,
+                nodeIds: node_ids
             }} AS result
             '''
         else:
