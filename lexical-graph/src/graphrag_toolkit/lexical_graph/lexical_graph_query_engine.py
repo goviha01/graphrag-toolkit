@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 RetrieverType = Union[BaseRetriever, Type[BaseRetriever]]
 PostProcessorsType = Union[BaseNodePostprocessor, List[BaseNodePostprocessor]]
-EnableVersioningType = Union[bool, VersioningConfig]
+VersioningType = Union[bool, VersioningConfig]
 
 
 class LexicalGraphQueryEngine(BaseQueryEngine):
@@ -70,7 +70,7 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
                                    retrievers: Optional[List[WeightedTraversalBasedRetrieverType]] = None,
                                    post_processors: Optional[PostProcessorsType] = None,
                                    filter_config: Optional[FilterConfig] = None,
-                                   enable_versioning: Optional[EnableVersioningType] = None,
+                                   versioning: Optional[VersioningType] = None,
                                    **kwargs):
         """
         Constructs an instance of LexicalGraphQueryEngine configured for traversal-based search.
@@ -100,8 +100,8 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
         """
         tenant_id = to_tenant_id(tenant_id)
 
-        if enable_versioning is not None:
-            versioning_config = VersioningConfig(enabled=enable_versioning) if isinstance(enable_versioning, bool) else enable_versioning
+        if versioning is not None:
+            versioning_config = VersioningConfig(enabled=versioning) if isinstance(versioning, bool) else versioning
         else:
             versioning_config = VersioningConfig(enabled=GraphRAGConfig.enable_versioning)
 
@@ -151,7 +151,7 @@ class LexicalGraphQueryEngine(BaseQueryEngine):
                                    retrievers: Optional[List[SemanticGuidedRetrieverType]] = None,
                                    post_processors: Optional[PostProcessorsType] = None,
                                    filter_config: FilterConfig = None,
-                                   enable_versioning: Optional[EnableVersioningType] = None,
+                                   enable_versioning: Optional[VersioningType] = None,
                                    **kwargs):
         """
         Creates and configures an instance of `LexicalGraphQueryEngine` for semantic-guided
