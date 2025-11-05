@@ -10,7 +10,7 @@ from typing import List, Sequence, Dict, Any, Optional, Callable
 from urllib.parse import urlparse
 
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig, type_name_for_key_value, format_datetime
-from graphrag_toolkit.lexical_graph.versioning import VALID_FROM, VALID_TO
+from graphrag_toolkit.lexical_graph.versioning import VALID_FROM, VALID_TO, TIMESTAMP_LOWER_BOUND, TIMESTAMP_UPPER_BOUND
 from graphrag_toolkit.lexical_graph.config import GraphRAGConfig, EmbeddingType
 from graphrag_toolkit.lexical_graph.storage.vector import VectorIndex, to_embedded_query
 from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY
@@ -378,8 +378,8 @@ class PGIndex(VectorIndex):
                             value text,
                             metadata jsonb,
                             embedding vector({self.dimensions}),
-                            valid_from BIGINT DEFAULT -1,
-                            valid_to BIGINT DEFAULT -1
+                            valid_from BIGINT DEFAULT {TIMESTAMP_LOWER_BOUND},
+                            valid_to BIGINT DEFAULT {TIMESTAMP_UPPER_BOUND}
                             );'''
                         )
                     except UniqueViolation:
@@ -447,7 +447,7 @@ class PGIndex(VectorIndex):
             )
             for node in nodes:
 
-                valid_from = node.metadata.get('source', {}).get('versioning', {}).get('valid_from', -1) 
+                valid_from = node.metadata.get('source', {}).get('versioning', {}).get('valid_from', TIMESTAMP_LOWER_BOUND) 
 
                 cur.execute(
                     f'INSERT INTO {self.schema_name}.{self.underlying_index_name()} ({self.index_name}Id, value, metadata, embedding, valid_from) SELECT %s, %s, %s, %s, %s WHERE NOT EXISTS (SELECT * FROM {self.schema_name}.{self.underlying_index_name()} c WHERE c.{self.index_name}Id = %s);',

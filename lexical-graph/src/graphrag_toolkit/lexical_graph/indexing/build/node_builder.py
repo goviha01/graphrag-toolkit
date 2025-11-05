@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 from llama_index.core.schema import BaseNode, BaseComponent
 
 from graphrag_toolkit.lexical_graph.metadata import SourceMetadataFormatter
-from graphrag_toolkit.lexical_graph.versioning import EXTRACT_TIMESTAMP, VALID_FROM
+from graphrag_toolkit.lexical_graph.versioning import EXTRACT_TIMESTAMP, VALID_FROM, TIMESTAMP_UPPER_BOUND
 from graphrag_toolkit.lexical_graph.indexing import IdGenerator
 from graphrag_toolkit.lexical_graph.indexing.build.build_filters import BuildFilters
 from graphrag_toolkit.lexical_graph.indexing.constants import DEFAULT_CLASSIFICATION
@@ -133,7 +133,7 @@ class NodeBuilder(BaseComponent):
             'extract_timestamp': extract_timestamp,
             'build_timestamp': build_timestamp,
             'valid_from': valid_from_timestamp,
-            'valid_to': -1
+            'valid_to': TIMESTAMP_UPPER_BOUND
         }
 
         return metadata

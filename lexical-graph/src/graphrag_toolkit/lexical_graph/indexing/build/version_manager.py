@@ -6,7 +6,7 @@ import time
 from tqdm import tqdm
 from typing import Any, List, Union, Dict, Tuple
 
-from graphrag_toolkit.lexical_graph.versioning import VALID_FROM, VALID_TO, VERSION_INDEPENDENT_ID_FIELDS
+from graphrag_toolkit.lexical_graph.versioning import VALID_FROM, VALID_TO, VERSION_INDEPENDENT_ID_FIELDS, TIMESTAMP_LOWER_BOUND, TIMESTAMP_UPPER_BOUND
 from graphrag_toolkit.lexical_graph.metadata import format_version_independent_id_fields, to_metadata_filter
 from graphrag_toolkit.lexical_graph.indexing.node_handler import NodeHandler
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
@@ -74,8 +74,8 @@ class VersionManager(NodeHandler):
         WHERE {where_clauses} AND {version_independent_id_fields_filter}
         RETURN {{
             source_id: {self.graph_store.node_id("source.sourceId")},
-            valid_from: coalesce(source.{VALID_FROM}, -1),
-            valid_to: coalesce(source.{VALID_TO}, -1)
+            valid_from: coalesce(source.{VALID_FROM}, {TIMESTAMP_LOWER_BOUND}),
+            valid_to: coalesce(source.{VALID_TO}, {TIMESTAMP_UPPER_BOUND})
         }} AS result ORDER BY result.valid_from DESC
         '''
 
@@ -157,13 +157,13 @@ class VersionManager(NodeHandler):
                 new_source_node['valid_to'] = prev_valid_from
             else:
                 # new node is the latest
-                new_source_node['valid_to'] = -1
+                new_source_node['valid_to'] = TIMESTAMP_UPPER_BOUND
             
                 
-        if new_source_node['valid_to'] == -1:
+        if new_source_node['valid_to'] == TIMESTAMP_UPPER_BOUND:
             # latest source node, so archive previous latest source nodes
             for n in sorted_existing_source_nodes:
-                if new_source_node['valid_from'] > n['valid_from'] and n['valid_to'] == -1:
+                if new_source_node['valid_from'] > n['valid_from'] and n['valid_to'] == TIMESTAMP_UPPER_BOUND:
                     adjustments.append({'source_id':n['source_id'], 'valid_from':n['valid_from'], 'valid_to':new_source_node['valid_from']})
         else:
             # is historical source node, so insert into timeline, adjusting other historical nodes as necessary

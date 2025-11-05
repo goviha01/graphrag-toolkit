@@ -1,8 +1,10 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+from graphrag_toolkit.lexical_graph.versioning import TIMESTAMP_UPPER_BOUND, TIMESTAMP_LOWER_BOUND
+
 from pydantic import BaseModel, ConfigDict, Field, AliasChoices
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Optional, Union
 
 class Statement(BaseModel):
     """
@@ -87,10 +89,10 @@ class Topic(BaseModel):
 class Versioning(BaseModel):
     model_config = ConfigDict(strict=True)
 
-    valid_from:int = -1
-    valid_to:int = -1
-    extract_timestamp:int = -1
-    build_timestamp:int = -1
+    valid_from:int = TIMESTAMP_LOWER_BOUND
+    valid_to:int = TIMESTAMP_UPPER_BOUND
+    extract_timestamp:int = TIMESTAMP_LOWER_BOUND
+    build_timestamp:int = TIMESTAMP_LOWER_BOUND
     id_fields:List[str] = []
 
 class Source(BaseModel):

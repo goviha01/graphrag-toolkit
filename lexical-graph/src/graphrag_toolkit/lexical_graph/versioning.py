@@ -11,6 +11,9 @@ VERSION_INDEPENDENT_ID_FIELDS = '__aws__versioning__id_fields__'
 
 VERSIONING_METADATA_KEYS = [VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSION_INDEPENDENT_ID_FIELDS]
 
+TIMESTAMP_LOWER_BOUND = -1
+TIMESTAMP_UPPER_BOUND = 10000000000000
+
 IdFieldsType = Union[str, List[str]]
 
 def add_versioning_info(
@@ -26,7 +29,7 @@ def add_versioning_info(
 
 class VersioningConfig():
     def __init__(self, at_timestamp:Optional[int]=None, enabled:Optional[bool]=None):
-        self.at_timestamp = at_timestamp or -1
+        self.at_timestamp = at_timestamp or TIMESTAMP_UPPER_BOUND
         if enabled is not None:
             self.enabled = enabled
         elif at_timestamp is not None:

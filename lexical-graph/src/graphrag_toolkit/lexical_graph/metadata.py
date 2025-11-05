@@ -8,7 +8,7 @@ from dateutil.parser import parse
 from datetime import datetime, date
 
 from graphrag_toolkit.lexical_graph import GraphRAGConfig
-from graphrag_toolkit.lexical_graph.versioning import VersioningConfig, VALID_FROM, VALID_TO
+from graphrag_toolkit.lexical_graph.versioning import VersioningConfig, VALID_FROM, VALID_TO, TIMESTAMP_LOWER_BOUND, TIMESTAMP_UPPER_BOUND
 
 from llama_index.core.vector_stores.types import FilterCondition, FilterOperator, MetadataFilter, MetadataFilters
 from llama_index.core.bridge.pydantic import BaseModel
@@ -219,10 +219,10 @@ class FilterConfig(BaseModel):
         if not versioning_config.enabled:
             return self
         
-        if not versioning_config.at_timestamp or versioning_config.at_timestamp == -1:
+        if not versioning_config.at_timestamp or versioning_config.at_timestamp == TIMESTAMP_UPPER_BOUND:
             version_filter = MetadataFilter(
                 key=VALID_TO,
-                value=-1,
+                value=TIMESTAMP_UPPER_BOUND,
                 operator=FilterOperator.EQ
             )
         else:
