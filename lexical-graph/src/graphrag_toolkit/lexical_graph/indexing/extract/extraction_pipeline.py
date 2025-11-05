@@ -5,7 +5,7 @@ import logging
 import multiprocessing
 import time
 from pipe import Pipe
-from typing import List, Optional, Sequence, Dict, Iterable, Any
+from typing import List, Optional, Sequence, Generator, Iterable, Any
 
 from graphrag_toolkit.lexical_graph import TenantId
 from graphrag_toolkit.lexical_graph.config import GraphRAGConfig
@@ -303,7 +303,7 @@ class ExtractionPipeline():
         self.extraction_filters = extraction_filters or FilterConfig()
         self.pipeline_kwargs = kwargs
     
-    def _source_documents_from_base_nodes(self, nodes:Sequence[BaseNode]) -> List[SourceDocument]:
+    def _source_documents_from_base_nodes(self, nodes:Sequence[BaseNode]) -> Generator[SourceDocument, None, None]:
         """
         Converts a sequence of BaseNode objects into a list of SourceDocument objects
         organized by their source relationships.

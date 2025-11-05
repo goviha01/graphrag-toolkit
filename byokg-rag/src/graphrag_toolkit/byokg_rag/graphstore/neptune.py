@@ -8,6 +8,10 @@ from botocore.exceptions import ClientError
 from .graphstore import GraphStore
 from ..indexing import NeptuneAnalyticsGraphStoreIndex, Embedding
 
+# For new schema stuff for NDB.
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+
+
 logger = logging.getLogger(__name__)
 
 class BaseNeptuneGraphStore(GraphStore):
@@ -428,6 +432,107 @@ class NeptuneDBGraphStore(BaseNeptuneGraphStore):
         response = self.neptune_data_client.start_loader_job(**load_args)
         logger.info(response)
 
+    # Helper function for getting a pg_schema() like representation of 
+    # edgeLabelDetails from a Neptune Database.
+    def _get_edge_properties(
+        self, propertyGraphSummary, type_mapping: Dict[str, str]
+    ) -> None:
+        """Updates propertyGraphSummary with edgeLabelDetails."""
+        edge_properties_query = """
+        MATCH ()-[e:`{e_label}`]->()
+        RETURN properties(e) AS props
+        LIMIT 100
+        """
+        propertyGraphSummary["edgeLabelDetails"] = {}
+        for label in propertyGraphSummary["edgeLabels"]:
+            q = edge_properties_query.format(e_label=label)
+            explain = self.execute_query(q)
+            data = {"label": label, "properties": self.execute_query(q)} 
+            prop_types = {}
+            for p in data["properties"]:
+                from typing import cast
+                p_dict = cast(Dict[str, Any], p)
+                props = cast(Dict[str, Any], p_dict["props"])
+                for k, v in props.items():
+                    datatype = type_mapping[type(v).__name__]
+                    if k not in prop_types:
+                        prop_types[k] = set()
+                    prop_types[k].add(datatype)
+            properties = {k: {"datatypes": list(v)} for k, v in prop_types.items()}
+            propertyGraphSummary["edgeLabelDetails"][label] = {"properties": properties}
+        return
+    
+    # Helper function for getting a pg_schema() like representation of 
+    # nodeLabelDetails from a Neptune Database.
+    def _get_node_properties(
+        self, propertyGraphSummary, type_mapping: Dict[str, str]
+    )-> None:
+        """Updates propertyGraphSummary with nodeLabelDetails."""
+        node_properties_query = """
+        MATCH (a:`{n_label}`)
+        RETURN properties(a) AS props
+        LIMIT 100
+        """
+        n_labels = propertyGraphSummary["nodeLabels"]
+        propertyGraphSummary["nodeLabelDetails"] = {}
+        for label in n_labels:
+            q = node_properties_query.format(n_label=label)
+            data = {"label": label, "properties": self.execute_query(q)}
+            prop_types = {}
+            for p in data["properties"]:
+                from typing import cast
+                p_dict = cast(Dict[str, Any], p)
+                props = cast(Dict[str, Any], p_dict["props"])
+                for k, v in props.items():
+                    datatype = type_mapping[type(v).__name__]
+                    if k not in prop_types:
+                        prop_types[k] = set()
+                    prop_types[k].add(datatype)
+            properties = {k: {"datatypes": list(v)} for k, v in prop_types.items()}
+            propertyGraphSummary["nodeLabelDetails"][label] = {"properties": properties}
+        return
+    
+    # Helper function for getting a pg_schema() like representation of 
+    # labelTriples from a Neptune Database.
+    def _get_triples(self, propertyGraphSummary):
+        triple_query = """
+        MATCH (a)-[e:`{e_label}`]->(b)
+        WITH a,e,b LIMIT 3000
+        RETURN DISTINCT labels(a) AS from, type(e) AS edge, labels(b) AS to
+        LIMIT 10
+        """
+        triple_template = "(:`{a}`)-[:`{e}`]->(:`{b}`)"
+        triple_schema = []
+        for label in propertyGraphSummary["edgeLabels"]:     
+            q = triple_query.format(e_label=label)
+            data = self.execute_query(q)
+            for d in data:         
+                triple = {}
+                triple["~type"] = d["edge"]
+                triple["~from"] = d["from"][0]
+                triple["~to"] = d["to"][0]
+                triple_schema.append(triple)
+        propertyGraphSummary["labelTriples"] = triple_schema
+        return
+    
+    # Provided with a propertyGraphSummary from the neptune_data_client,
+    # this helper function uses it to further populate this summary with
+    # edgeLabelDetails, nodeLabelDetails, and labelTriples using the same
+    # syntax as Neptune Analytics pg_schema().
+    def _refresh_schema(self, propertyGraphSummary) -> None:
+        """Refreshes the Neptune graph schema information into propertyGraphSummary."""
+
+        types: Dict[str, str] = {
+            "str": "STRING",
+            "float": "DOUBLE",
+            "int": "INTEGER",
+            "list": "LIST",
+            "dict": "MAP",
+            "bool": "BOOLEAN",
+        }     
+        self._get_triples(propertyGraphSummary)
+        self._get_node_properties(propertyGraphSummary, types)
+        self._get_edge_properties(propertyGraphSummary, types)
 
     def get_schema(self):
         """
@@ -435,39 +540,11 @@ class NeptuneDBGraphStore(BaseNeptuneGraphStore):
 
         :return: dict The property graph schema
         """
-
-        response = self.neptune_data_client.get_propertygraph_summary()
-        logger.info(response)
-        summary = response['payload']['graphSummary']
-        # quick effort at node label details, sample 100 nodes per type and get their distinct property keys
-        summary["nodeLabelDetails"] = {}
-        for ntype in summary["nodeLabels"]:
-            oc_query = f"""MATCH (n:`{ntype}`)
-                           WITH n LIMIT 100
-                           UNWIND keys(n) AS key
-                           RETURN COLLECT(DISTINCT key) AS properties"""
-            response = self.execute_query(oc_query)
-            summary["nodeLabelDetails"][ntype] = response[0]
-        # quick effort at edge label details
-        summary["edgeLabelDetails"] = {}
-        for etype in summary["edgeLabels"]:
-            oc_query = f"""MATCH (startNode)-[r:`{etype}`]->(endNode)
-                           WITH r LIMIT 100
-                           UNWIND keys(r) AS key
-                           RETURN COLLECT(DISTINCT key) AS properties"""
-            response = self.execute_query(oc_query)
-            summary["edgeLabelDetails"][etype] = response[0]
-
-        # expensive effort to get label triples.not a big deal since get_schema is called just once usually.
-        # @TODO optimize
-        oc_query = """
-            MATCH (x)-[r]->(y)
-            RETURN DISTINCT head(labels(x)) AS `~from`, type(r) AS `~type`, head(labels(y)) AS `~to`"""
-        response = self.execute_query(oc_query)
-        summary["labelTriples"] = response
-        return summary
-
-
+        response = self.neptune_data_client.get_propertygraph_summary(mode='basic')
+        graphSummary = response['payload']['graphSummary']
+        self._refresh_schema(graphSummary)
+        return graphSummary
+        
     def execute_query(self, cypher, parameters={}):
         logger.info(f"GraphQuery:: {cypher}")
         response = self.neptune_data_client.execute_open_cypher_query(
@@ -475,3 +552,4 @@ class NeptuneDBGraphStore(BaseNeptuneGraphStore):
             parameters=json.dumps(parameters)
         )
         return response['results']
+    

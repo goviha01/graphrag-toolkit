@@ -1,18 +1,19 @@
 --only-binary :all:
 
-pydantic>=2.8.2
-boto3
-xmltodict
-colorama
-pyyaml
-pytest
+boto3>=1.39.11
+botocore>=1.39.11
+colorama==0.4.6
 faiss-cpu==1.9.0
-thefuzz
-langchain_huggingface
-langchain_aws
-llama-index-embeddings-bedrock==0.6.1
-ipykernel
-torch
+langchain_huggingface==0.3.1
+langchain_aws==0.2.33
+llama-index-embeddings-bedrock==0.6.2
+numpy>=1.24.0,<2.0.0
+pydantic>=2.8.2
+pyyaml==6.0.3
+pytest==8.4.2
+sentence-transformers>=2.4.0
+tiktoken==0.11.0
+thefuzz==0.22.1
+torch==2.8.0
 transformers>=4.44.2
-numpy>=1.26.4
-scipy>=1.15.3
+xmltodict==1.0.2
