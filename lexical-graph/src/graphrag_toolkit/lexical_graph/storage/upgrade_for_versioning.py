@@ -19,7 +19,7 @@ from graphrag_toolkit.lexical_graph.storage import GraphStoreFactory
 from graphrag_toolkit.lexical_graph.storage.graph import MultiTenantGraphStore, GraphStore
 from graphrag_toolkit.lexical_graph.storage.graph import NonRedactedGraphQueryLogFormatting
 from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory
-from graphrag_toolkit.lexical_graph.storage.vector import MultiTenantVectorStore, VectorIndex, DummyVectorIndex
+from graphrag_toolkit.lexical_graph.storage.vector import MultiTenantVectorStore, VectorStore, VectorIndex, DummyVectorIndex
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -56,7 +56,7 @@ def set_source_versioning_info(graph_store:GraphStore, source_ids):
     cypher = f'''
     MATCH (source:`__Source__`) 
     WHERE {graph_store.node_id("source.sourceId")} IN $sourceIds
-    SET s.{VALID_FROM} = {TIMESTAMP_LOWER_BOUND}, s.{VALID_TO} = {TIMESTAMP_UPPER_BOUND}'''
+    SET source.{VALID_FROM} = {TIMESTAMP_LOWER_BOUND}, source.{VALID_TO} = {TIMESTAMP_UPPER_BOUND}'''
 
     parameters = {
         'sourceIds': source_ids
@@ -111,6 +111,69 @@ def get_node_ids(graph_store:GraphStore, index:VectorIndex, source_ids:List[str]
         return {result['result']['sourceId']:result['result']['nodeIds'] for result in results}
 
 
+class VectorStoreUnitOfWork():
+
+    def __init__(self, index:VectorIndex, stats, batch_size):
+        self.index = index
+        self.stats = stats
+        self.batch_size = batch_size
+        self.node_ids = []
+
+    def add_node_ids(self, node_ids):
+        self.node_ids.extend(node_ids)
+
+    @property
+    def size(self):
+        return len(self.node_ids)
+
+    def apply(self):
+
+        for node_id_batch in iter_batch(self.node_ids, batch_size=self.batch_size):
+            self.index.enable_for_versioning(node_id_batch)
+            if self.index.index_name not in self.stats:
+                self.stats[self.index.index_name] = 0
+            self.stats[self.index.index_name] += len(node_id_batch)
+
+        self.node_ids = []
+
+class UnitOfWork():
+
+    def __init__(self, vector_store:VectorStore, graph_store:GraphStore, stats, batch_size, progress):
+        self.vector_store = vector_store
+        self.graph_store = graph_store
+        self.vector_store_units_of_work = {
+            index.index_name:VectorStoreUnitOfWork(index, stats, batch_size)
+            for index in vector_store.all_indexes()
+        }
+        self.batch_size = batch_size
+        self.progress = progress
+        self.source_ids = []
+
+    @property
+    def size(self):
+        return len(self.source_ids)
+
+    def add_source_id(self, source_id):
+        self.source_ids.append(source_id)
+        for index in self.vector_store.all_indexes():          
+            node_id_map = get_node_ids(self.graph_store, index, [source_id])
+            for _, node_ids in node_id_map.items():
+                self.vector_store_units_of_work[index.index_name].add_node_ids(node_ids)
+        do_apply = False
+        for vector_store_unit_of_work in self.vector_store_units_of_work.values():
+            if vector_store_unit_of_work.size >= (self.batch_size * 10):
+                do_apply = True
+        if do_apply:
+            self.apply()
+
+    def apply(self):
+        for vector_store_unit_of_work in self.vector_store_units_of_work.values():
+            vector_store_unit_of_work.apply()
+        set_source_versioning_info(self.graph_store, self.source_ids)
+        self.progress.update(len(self.source_ids))
+        self.source_ids = []
+
+
 def upgrade(graph_store_info:str, vector_store_info:str, index_names:List[str], batch_size:int, tenant_id=None):
 
     with (
@@ -120,9 +183,9 @@ def upgrade(graph_store_info:str, vector_store_info:str, index_names:List[str], 
         tenant_id = to_tenant_id(tenant_id)
 
         if tenant_id.is_default_tenant():
-            print(f'Upgrading for default tenant')
+            print(f'Upgrading default tenant')
         else:
-            print(f'Upgrading for tenant {tenant_id}')
+            print(f'Upgrading {tenant_id}')
             graph_store = MultiTenantGraphStore.wrap(
                 graph_store,
                 tenant_id
@@ -133,22 +196,20 @@ def upgrade(graph_store_info:str, vector_store_info:str, index_names:List[str], 
             )
 
         stats = {
-            'tenant_id': tenant_id
+            'tenant_id': str(tenant_id)
         }
 
         source_ids = get_source_ids(graph_store)
 
-        progress_bar_1 = tqdm(total=len(source_ids), desc=f'Upgrading sources for tenant {tenant_id}')
-        for source_id in source_ids:
-            for index in vector_store.all_indexes():
-                stats[index.index_name] = 0
-                node_id_map = get_node_ids(graph_store, index, [source_id])
-                for upgrade_source_id, node_ids in node_id_map.items():
-                    for node_id_batch in iter_batch(node_ids, batch_size=batch_size):
-                        index.enable_for_versioning(node_id_batch)
-                        stats[index.index_name] += len(node_id_batch)
-                    set_source_versioning_info(graph_store, [upgrade_source_id])
-                    progress_bar_1.update(1)
+        progress_bar = tqdm(total=len(source_ids), desc=f'Upgrading sources for tenant {tenant_id}')
+        unit_of_work = UnitOfWork(vector_store, graph_store, stats, batch_size, progress_bar)
+
+        source_id = source_ids.pop() if source_ids else None
+        while source_id:
+            unit_of_work.add_source_id(source_id)
+            source_id = source_ids.pop() if source_ids else None
+
+        unit_of_work.apply()
 
         return stats
     

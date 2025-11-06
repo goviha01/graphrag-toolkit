@@ -177,3 +177,7 @@ class VectorIndex(BaseModel):
     @abc.abstractmethod
     def update_versioning(self, versioning_timestamp:int, ids:List[str]=[]):
         raise NotImplementedError
+    
+    @abc.abstractmethod
+    def enable_for_versioning(self, ids:List[str]=[]):
+        raise NotImplementedError
