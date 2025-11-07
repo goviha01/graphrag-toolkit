@@ -41,7 +41,9 @@ Indexed documents are versioned based on _extraction_ timestamps. A document wil
 
 When _extracting_ data (using `LexicalGraphIndex.extract()` or `LexicalGraphIndex.extract_and_build()`), you must add the names of _version-independent metadata fields_ to the metadata of each document you want to update and version. 
 
-When _building_ a lexical graph (using `LexicalGraphIndex.build()` or `LexicalGraphIndex.extract_and_build()`), you must enable versioning, using either the `GraphRAGConfig.enable_versioning=True` global configuration parameter, or by passing a `BuildConfig(enable_versioning=True)` configuration object to the `LexicalGraphIndex` constructor, or by passing `enable_versioning=True` to the `LexicalGraphIndex.build()` or `LexicalGraphIndex.extract_and_build()` method. The presence of `enable_versioning=True` forces the build process to check for previous versions of each document, as identified by the version-independent metadata fields suplied in the extract stage.
+When _building_ a lexical graph (using `LexicalGraphIndex.build()` or `LexicalGraphIndex.extract_and_build()`), you must enable versioning, using either the `GraphRAGConfig.enable_versioning=True` global configuration parameter, or by passing a `BuildConfig(enable_versioning=True)` configuration object to the `LexicalGraphIndex` constructor, or by passing `enable_versioning=True` to the `LexicalGraphIndex.build()` or `LexicalGraphIndex.extract_and_build()` methods. 
+
+The presence of `enable_versioning=True` forces the build process to check for previous versions of each document, as identified by the version-independent metadata fields suplied in the extract stage.
 
 The following example uses `LexicalGraphIndex.extract_and_build()` to extract data from a local directory and build a lexical graph. The `get_file_metadata()` function wraps the metadata produced by the `default_file_metadata_func()` (from `SimpleDirectoryReader`) to indicate that the `file_name` and `file_path` metadata fields together act as a version-independent identifier:
 
