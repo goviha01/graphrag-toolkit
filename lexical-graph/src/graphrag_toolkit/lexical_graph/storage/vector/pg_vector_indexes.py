@@ -702,7 +702,7 @@ class PGIndex(VectorIndex):
         cur = dbconn.cursor() 
 
         try:
-            cur.execute(f'''ALTER TABLE {self.schema_name}.{self.underlying_index_name()}(
+            cur.execute(f'''ALTER TABLE {self.schema_name}.{self.underlying_index_name()}
                 ADD COLUMN IF NOT EXISTS valid_from BIGINT DEFAULT {TIMESTAMP_LOWER_BOUND},
                 ADD COLUMN IF NOT EXISTS valid_to BIGINT DEFAULT {TIMESTAMP_UPPER_BOUND};'''
             )

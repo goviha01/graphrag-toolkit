@@ -21,10 +21,7 @@ from graphrag_toolkit.lexical_graph.storage.graph import NonRedactedGraphQueryLo
 from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory
 from graphrag_toolkit.lexical_graph.storage.vector import MultiTenantVectorStore, VectorStore, VectorIndex, DummyVectorIndex
 
-
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-
-#set_logging_config('DEBUG', ['graphrag_toolkit.lexical_graph.storage.graph'])
 
 def iter_batch(iterable, batch_size):
     source_iter = iter(iterable)
