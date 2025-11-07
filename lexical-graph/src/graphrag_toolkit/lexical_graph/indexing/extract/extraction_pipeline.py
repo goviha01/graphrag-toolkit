@@ -232,6 +232,7 @@ class ExtractionPipeline():
         num_workers = num_workers or GraphRAGConfig.extraction_num_workers
         batch_size = batch_size or GraphRAGConfig.extraction_batch_size
         include_classification_in_entity_id = include_classification_in_entity_id or GraphRAGConfig.include_classification_in_entity_id
+        extract_timestamp = kwargs.pop('extract_timestamp', None)
 
         if num_workers > multiprocessing.cpu_count():
             num_workers = multiprocessing.cpu_count()
@@ -301,6 +302,7 @@ class ExtractionPipeline():
         self.show_progress = show_progress
         self.id_rewriter = IdRewriter(id_generator=id_generator)
         self.extraction_filters = extraction_filters or FilterConfig()
+        self.extract_timestamp = extract_timestamp
         self.pipeline_kwargs = kwargs
     
     def _source_documents_from_base_nodes(self, nodes:Sequence[BaseNode]) -> Generator[SourceDocument, None, None]:
@@ -402,7 +404,7 @@ class ExtractionPipeline():
                 **self.pipeline_kwargs
             )
 
-            extract_timestamp = int(time.time() * 1000)
+            extract_timestamp = self.extract_timestamp or int(time.time() * 1000)
 
             def add_timestamp(node):
                 if EXTRACT_TIMESTAMP in node.metadata:
