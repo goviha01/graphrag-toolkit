@@ -115,4 +115,7 @@ class DummyVectorIndex(VectorIndex):
         return []
     
     def update_versioning(self, versioning_timestamp:int, ids:List[str]=[]):
-        return None
+        return []
+    
+    def enable_for_versioning(self, ids:List[str]=[]):
+        return []

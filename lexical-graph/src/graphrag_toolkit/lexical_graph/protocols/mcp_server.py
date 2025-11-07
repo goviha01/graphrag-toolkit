@@ -168,11 +168,11 @@ def query_tenant_graph(
     return query_graph
 
 def get_tenant_ids(graph_store:GraphStore):
-    
-    cypher = '''MATCH (n)
+
+    cypher = '''MATCH (n)<-[:`__EXTRACTED_FROM__`]-()
     WITH DISTINCT labels(n) as lbls
     WITH split(lbls[0], '__') AS lbl_parts WHERE size(lbl_parts) > 2
-    WITH lbl_parts WHERE lbl_parts[1] = 'SYS_Class' AND lbl_parts[2] <> ''
+    WITH lbl_parts WHERE lbl_parts[1] = 'Source' AND lbl_parts[2] <> ''
     RETURN DISTINCT lbl_parts[2] AS tenant_id
     '''
 

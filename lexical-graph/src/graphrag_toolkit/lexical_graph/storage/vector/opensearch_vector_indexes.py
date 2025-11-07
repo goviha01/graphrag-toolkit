@@ -944,7 +944,7 @@ class OpenSearchIndex(VectorIndex):
         
         return filtered_nodes
     
-    def update_versioning(self, versioning_timestamp:int, ids:List[str]=[]):
+    def update_versioning(self, versioning_timestamp:int, ids:List[str]=[]) -> List[str]:
 
         allow_refresh = True
         doc_id_map = self._get_existing_doc_ids_for_ids(ids)
@@ -970,14 +970,11 @@ class OpenSearchIndex(VectorIndex):
                 requests.append(update_request)
 
         if requests:
-
-            response = self.client._os_client.bulk(body='\n'.join(requests))
-
-            if response['errors']:
-                logger.error(f'Error while updating versioning info: {str(response)}')
-        
+            failed_doc_ids = self._try_bulk_update('\n'.join(requests))
+            return self._unmap_doc_ids(failed_doc_ids, doc_id_map)        
         else:
             logger.warning(f'Versioning bulk update request is empty')
+            return []
 
     
     def _get_existing_doc_ids_for_ids(self, ids:List[str]=[]):
@@ -1004,7 +1001,8 @@ class OpenSearchIndex(VectorIndex):
         
         return doc_id_map
     
-    def enable_for_versioning(self, ids:List[str]=[]):
+    def enable_for_versioning(self, ids:List[str]=[]) -> List[str]:
+
         allow_refresh = True
         doc_id_map = self._get_existing_doc_ids_for_ids(ids)
 
@@ -1029,11 +1027,42 @@ class OpenSearchIndex(VectorIndex):
                 requests.append(update_request)
 
         if requests:
-
-            response = self.client._os_client.bulk(body='\n'.join(requests))
-
-            if response['errors']:
-                logger.error(f'Error while enabling versioning info: {str(response)}')
-        
+            failed_doc_ids = self._try_bulk_update('\n'.join(requests))
+            return self._unmap_doc_ids(failed_doc_ids, doc_id_map)      
         else:
             logger.warning(f'Versioning bulk update request is empty')
+            return []
+        
+    def _unmap_doc_ids(self, doc_ids:List[str], doc_id_map:Dict[str, List[str]]) -> List[str]:
+        
+        reverse_doc_id_map = {}
+
+        for id, doc_id_list in doc_id_map.items():
+            reverse_doc_id_map.update({doc_id:id for doc_id in doc_id_list})
+
+        return [reverse_doc_id_map[doc_id] for doc_id in doc_ids]
+
+    def _try_bulk_update(self, body:str):
+
+        def is_transient(item:Dict):
+            return item.get('update', {}).get('status', 0) in [429, 503]
+
+        for attempt_num in range(1, 6):
+
+            response = self.client._os_client.bulk(body=body)
+
+            if response['errors']:
+                is_retriable = all([is_transient(item) for item in response.get('items', [])])
+                if is_retriable:
+                    logger.warning(f'Transient error during bulk update, retrying after {attempt_num} seconds')
+                    time.sleep(attempt_num)
+            else:
+                return []
+            
+        logger.error(f'Error during bulk update: {str(response)}')
+
+        return [
+            item['update']['_id'] 
+            for item in response['items']
+            if item.get('error', None)
+        ]

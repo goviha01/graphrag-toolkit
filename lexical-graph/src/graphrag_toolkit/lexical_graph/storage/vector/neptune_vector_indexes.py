@@ -316,7 +316,7 @@ index: {self.underlying_index_name()}
         return all_results
     
     def update_versioning(self, versioning_timestamp:int, ids:List[str]=[]):
-        return None
+        return []
     
     def enable_for_versioning(self, ids:List[str]=[]):
-        return None
+        return []

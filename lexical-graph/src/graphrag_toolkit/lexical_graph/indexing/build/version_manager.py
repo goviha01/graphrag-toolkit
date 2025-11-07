@@ -8,6 +8,7 @@ from typing import Any, List, Union, Dict, Tuple
 
 from graphrag_toolkit.lexical_graph.versioning import VALID_FROM, VALID_TO, VERSION_INDEPENDENT_ID_FIELDS, TIMESTAMP_LOWER_BOUND, TIMESTAMP_UPPER_BOUND
 from graphrag_toolkit.lexical_graph.metadata import format_version_independent_id_fields, to_metadata_filter
+from graphrag_toolkit.lexical_graph.errors import IndexError
 from graphrag_toolkit.lexical_graph.indexing.node_handler import NodeHandler
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
 from graphrag_toolkit.lexical_graph.storage.graph.graph_utils import filter_config_to_opencypher_filters
@@ -200,7 +201,16 @@ class VersionManager(NodeHandler):
         logger.debug(f'Updating valid_to version info for {source_id} in vector index [index: {index.underlying_index_name()}, batch_sizes: {[len(b) for b in node_id_batches]}, valid_to: {versioning_timestamp}]')
 
         for node_id_batch in node_id_batches:
-            index.update_versioning(versioning_timestamp, node_id_batch)
+            for num_attempts in range(1, 6):
+                failed_ids = index.update_versioning(versioning_timestamp, node_id_batch)
+                if failed_ids:
+                    logger.warning(f'Transient error while updating vector index, retrying in {num_attempts} seconds')
+                    time.sleep(num_attempts)
+                else:
+                    break
+            if failed_ids:
+                raise IndexError(f'Failed to update valid_to version info for {source_id} in vector index [index: {index.underlying_index_name()}, source_id: {source_id}, node_ids: {node_id_batch}]')
+
 
     def accept(self, nodes: List[BaseNode], **kwargs: Any):
         

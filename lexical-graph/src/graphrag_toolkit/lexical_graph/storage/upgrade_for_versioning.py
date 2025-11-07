@@ -34,22 +34,32 @@ def iter_batch(iterable, batch_size):
             break
         yield b
 
-def get_source_ids(graph_store:GraphStore):
+def get_num_source_ids(graph_store:GraphStore):
     
     cypher = f'''
     MATCH (source:`__Source__`) 
-    RETURN {{
-            source_id: {graph_store.node_id("source.sourceId")},
-            valid_from: coalesce(source.{VALID_FROM}, -1),
-            valid_to: coalesce(source.{VALID_TO}, -1)
-    }} AS result'''
+    RETURN count(source) AS source_count'''
     
     results = graph_store.execute_query_with_retry(cypher, {})
-
-    def requires_upgrading(result):
-        return result['result']['valid_from'] == -1 and result['result']['valid_to'] == -1
     
-    return [r['result']['source_id'] for r in results if requires_upgrading(r)]
+    return [r['source_count'] for r in results][0]
+
+def get_source_ids(graph_store:GraphStore, failed_source_ids:List[str]):
+    
+    cypher = f'''
+    MATCH (source:`__Source__`) 
+    WHERE coalesce(source.{VALID_FROM}, -1) = -1
+    AND coalesce(source.{VALID_TO}, -1) = -1
+    AND NOT {graph_store.node_id("source.sourceId")} IN $failedSourceIds
+    RETURN {graph_store.node_id("source.sourceId")} AS source_id LIMIT 10000'''
+
+    parameters = {
+        'failedSourceIds': failed_source_ids
+    }
+    
+    results = graph_store.execute_query_with_retry(cypher, parameters)
+    
+    return [r['source_id'] for r in results]
 
 def set_source_versioning_info(graph_store:GraphStore, source_ids):
 
@@ -118,9 +128,11 @@ class VectorStoreUnitOfWork():
         self.stats = stats
         self.batch_size = batch_size
         self.node_ids = []
+        self.source_id_map = {}
 
-    def add_node_ids(self, node_ids):
+    def add_node_ids(self, source_id, node_ids):
         self.node_ids.extend(node_ids)
+        self.source_id_map.update({node_id:source_id for node_id in node_ids})
 
     @property
     def size(self):
@@ -128,13 +140,23 @@ class VectorStoreUnitOfWork():
 
     def apply(self):
 
+        failed_source_ids = set()
+
         for node_id_batch in iter_batch(self.node_ids, batch_size=self.batch_size):
-            self.index.enable_for_versioning(node_id_batch)
+            
+            failed_node_ids = self.index.enable_for_versioning(node_id_batch)
+            failed_source_ids.update(self.source_id_map[failed_node_id] for failed_node_id in failed_node_ids)
+            
             if self.index.index_name not in self.stats:
-                self.stats[self.index.index_name] = 0
-            self.stats[self.index.index_name] += len(node_id_batch)
+                self.stats[self.index.index_name] = {'succeeded': 0, 'failed': 0}
+            
+            self.stats[self.index.index_name]['succeeded'] += len(node_id_batch) - len(failed_node_ids)
+            self.stats[self.index.index_name]['failed'] += len(failed_node_ids)
 
         self.node_ids = []
+        self.source_id_map = {}
+
+        return list(failed_source_ids)
 
 class UnitOfWork():
 
@@ -148,30 +170,44 @@ class UnitOfWork():
         self.batch_size = batch_size
         self.progress = progress
         self.source_ids = []
+        self.failed_source_ids = []
 
     @property
     def size(self):
         return len(self.source_ids)
 
     def add_source_id(self, source_id):
+
         self.source_ids.append(source_id)
+
         for index in self.vector_store.all_indexes():          
             node_id_map = get_node_ids(self.graph_store, index, [source_id])
             for _, node_ids in node_id_map.items():
-                self.vector_store_units_of_work[index.index_name].add_node_ids(node_ids)
+                self.vector_store_units_of_work[index.index_name].add_node_ids(source_id, node_ids)
+
         do_apply = False
+
         for vector_store_unit_of_work in self.vector_store_units_of_work.values():
             if vector_store_unit_of_work.size >= (self.batch_size * 10):
                 do_apply = True
+
         if do_apply:
-            self.apply()
+            return self.apply()
+        else:
+            return []
 
     def apply(self):
+        failed_source_ids = set()
+
         for vector_store_unit_of_work in self.vector_store_units_of_work.values():
-            vector_store_unit_of_work.apply()
-        set_source_versioning_info(self.graph_store, self.source_ids)
+            failed_source_ids.update(vector_store_unit_of_work.apply())
+        
+        set_source_versioning_info(self.graph_store, [source_id for source_id in self.source_ids if source_id not in failed_source_ids])
+       
         self.progress.update(len(self.source_ids))
         self.source_ids = []
+
+        return list(failed_source_ids)
 
 
 def upgrade(graph_store_info:str, vector_store_info:str, index_names:List[str], batch_size:int, tenant_id=None):
@@ -199,30 +235,42 @@ def upgrade(graph_store_info:str, vector_store_info:str, index_names:List[str], 
             'tenant_id': str(tenant_id)
         }
 
-        source_ids = get_source_ids(graph_store)
+        num_source_ids = get_num_source_ids(graph_store)
 
-        progress_bar = tqdm(total=len(source_ids), desc=f'Upgrading sources for tenant {tenant_id}')
-        unit_of_work = UnitOfWork(vector_store, graph_store, stats, batch_size, progress_bar)
+        progress_bar = tqdm(total=num_source_ids, desc=f'Upgrading sources for tenant {tenant_id}')
 
-        source_id = source_ids.pop() if source_ids else None
-        while source_id:
-            unit_of_work.add_source_id(source_id)
+        failed_source_ids = []
+        source_ids = get_source_ids(graph_store, failed_source_ids)
+
+        while source_ids:
+
+            unit_of_work = UnitOfWork(vector_store, graph_store, stats, batch_size, progress_bar)
+
             source_id = source_ids.pop() if source_ids else None
+            while source_id:
+                failed_source_ids.extend(unit_of_work.add_source_id(source_id))
+                source_id = source_ids.pop() if source_ids else None
 
-        unit_of_work.apply()
+            failed_source_ids.extend(unit_of_work.apply())
+
+            source_ids = get_source_ids(graph_store, failed_source_ids)
+
+        stats['failed_source_ids'] = failed_source_ids
 
         return stats
     
 def get_tenant_ids(graph_store_info):
 
+    print('Getting tenant ids...')
+
     with (
         GraphStoreFactory.for_graph_store(graph_store_info, log_formatting=NonRedactedGraphQueryLogFormatting()) as graph_store,
     ):
     
-        cypher = '''MATCH (n)
+        cypher = '''MATCH (n)<-[:`__EXTRACTED_FROM__`]-()
         WITH DISTINCT labels(n) as lbls
         WITH split(lbls[0], '__') AS lbl_parts WHERE size(lbl_parts) > 2
-        WITH lbl_parts WHERE lbl_parts[1] = 'SYS_Class' AND lbl_parts[2] <> ''
+        WITH lbl_parts WHERE lbl_parts[1] = 'Source' AND lbl_parts[2] <> ''
         RETURN DISTINCT lbl_parts[2] AS tenant_id
         '''
 
@@ -244,7 +292,7 @@ def do_upgrade():
 
     graph_store_info = args_dict['graph_store']
     vector_store_info = args_dict['vector_store']
-    index_names = args_dict.get('index_names', [])
+    index_names = args_dict.get('index_names', ['chunk'])
     tenant_ids = args_dict.get('tenant_ids', [])
     batch_size = int(args_dict.get('batch_size', 100))
 

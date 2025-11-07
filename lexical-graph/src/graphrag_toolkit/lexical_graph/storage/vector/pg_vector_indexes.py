@@ -694,6 +694,8 @@ class PGIndex(VectorIndex):
             cur.close()
             dbconn.close()
 
+        return []
+
     def enable_for_versioning(self, ids:List[str]=[]):
         
         dbconn = self._get_connection()
@@ -710,3 +712,5 @@ class PGIndex(VectorIndex):
         finally:
             cur.close()
             dbconn.close()
+
+        return []
