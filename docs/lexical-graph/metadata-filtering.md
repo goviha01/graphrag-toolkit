@@ -26,7 +26,7 @@
 
 Metadata filtering allows you to retrieve a constrained set of sources, topics and statements based on metadata filters and associated values when querying a lexical graph.
 
-Metadata is any data added to the metadata dictionary of a source document. Depending on the source document, examples of metadata may include _title_, _url_, _filepath_, _date published_, and _author_. A source document's metadata is then associated with any chunks, topics and statements extracted from that document.
+Metadata is any data added to the metadata dictionary of a source document. Depending on the source document, examples of metadata may include `title`, `url`, `filepath`, `date published`, and `author`. A source document's metadata is then associated with any chunks, topics and statements extracted from that document.
 
 There are two parts to metadata filtering:
 
