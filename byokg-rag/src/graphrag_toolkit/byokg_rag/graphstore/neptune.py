@@ -446,7 +446,6 @@ class NeptuneDBGraphStore(BaseNeptuneGraphStore):
         propertyGraphSummary["edgeLabelDetails"] = {}
         for label in propertyGraphSummary["edgeLabels"]:
             q = edge_properties_query.format(e_label=label)
-            explain = self.execute_query(q)
             data = {"label": label, "properties": self.execute_query(q)} 
             prop_types = {}
             for p in data["properties"]:
