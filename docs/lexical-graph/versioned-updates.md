@@ -43,9 +43,9 @@ When _extracting_ data (using `LexicalGraphIndex.extract()` or `LexicalGraphInde
 
 When _building_ a lexical graph (using `LexicalGraphIndex.build()` or `LexicalGraphIndex.extract_and_build()`), you must enable versioning, using either the `GraphRAGConfig.enable_versioning=True` global configuration parameter, or by passing a `BuildConfig(enable_versioning=True)` configuration object to the `LexicalGraphIndex` constructor, or by passing `enable_versioning=True` to the `LexicalGraphIndex.build()` or `LexicalGraphIndex.extract_and_build()` methods. 
 
-The presence of `enable_versioning=True` forces the build process to check for previous versions of each document, as identified by the version-independent metadata fields suplied in the extract stage.
+The presence of `enable_versioning=True` forces the build process to check for previous versions of each document, as identified by the version-independent metadata fields supplied in the extract stage.
 
-The following example uses `LexicalGraphIndex.extract_and_build()` to extract data from a local directory and build a lexical graph. The `get_file_metadata()` function wraps the metadata produced by the `default_file_metadata_func()` (from `SimpleDirectoryReader`) to indicate that the `file_name` and `file_path` metadata fields together act as a version-independent identifier:
+The following example uses `LexicalGraphIndex.extract_and_build()` to extract data from a local directory and build a lexical graph. The `get_file_metadata()` function wraps the metadata produced by the `default_file_metadata_func()` to indicate that the `file_name` and `file_path` metadata fields together act as a version-independent identifier:
 
 ```python
 import os
@@ -55,7 +55,8 @@ from graphrag_toolkit.lexical_graph import add_versioning_info
 from graphrag_toolkit.lexical_graph.storage import GraphStoreFactory
 from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory
 
-from llama_index.core import SimpleDirectoryReader, default_file_metadata_func
+from llama_index.core import SimpleDirectoryReader
+from llama_index.core.readers.file.base import default_file_metadata_func
 
 GraphRAGConfig.enable_versioning = True
 
@@ -78,7 +79,7 @@ with(
     graph_index.extract_and_build(docs)
 ```
 
-The example above uses `GraphRAGConfig.enable_versioning = True` to force versioning checks during the build stage. Alternativley, you can supply a `BuildConfig` object:
+The example above uses `GraphRAGConfig.enable_versioning = True` to force versioning checks during the build stage. Alternatively, you can supply a `BuildConfig` object:
 
 ```python
 from graphrag_toolkit.lexical_graph import LexicalGraphIndex, BuildConfig
