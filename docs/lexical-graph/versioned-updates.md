@@ -11,6 +11,7 @@
     - [Indexing](#indexing)
     - [Querying](#querying)
     - [Combining versioned updates with metadata filtering](#combining-versioned-updates-with-metadata-filtering)
+  - [Example](#example)
   - [Upgrading existing graph and vector stores](#upgrading-existing-graph-and-vector-stores)
     - [Upgrading specific tenants](#upgrading-specific-tenants)
     - [Upgrading specific vector indexes](#upgrading-specific-vector-indexes)
