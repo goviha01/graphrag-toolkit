@@ -237,7 +237,7 @@ At the end of these four rounds of extraction, the following documents are consi
 
 If we were to query at timestamp 1761899972500, the following documents would be considered current: s1, s4, s5.
 
-![Historical](../../images/versioning-2.png)
+![Historical](../../images/versioning-3.png)
 
 ### Upgrading existing graph and vector stores
 
