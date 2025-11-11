@@ -210,6 +210,44 @@ with(
 
 ![Versioning](../../images/versioning-1.png)
 
+At timestamp 1761899971000 documents with the following source ids and metadata are ingested into an empty graph:
+
+  - s1: `{'doc_id': 'D1', 'revision': 1}` The `doc_id` is marked as a version-independent field, but there are no other current documents matching this field name and value (`doc_id=D2`).
+  - s2: `{'title': 'T1', 'app': 'app_01', 'month': '06'}` The `title` and `app` fields are marked as version-independent fields, but there are no other current documents matching these field names and values (`title=T1 and app=app_01`).
+  - s3: `{'url': 'http://xyz', 'accessed': 'Mon'}`  The `doc_id` is marked as a version-independent field, but there are no other current documents matching this field name and value (`url=http://xyz`).
+
+At 1761899972000 two more documents are ingested:
+
+  - s4: `{'title': 'T1', 'app': 'app_01', 'month': '07'}` The `title` and `app` fields are marked as version-independent fields: matching the field names and values (`title=T1 and app=app_01`) against other current documents results in s4 replacing s2.
+  - s5: `{'url': 'http://xyz', 'accessed': 'Tues'}` The `url` field is marked as a version-independent field: matching the field name and value (`url=http://xyz`) against other current documents results in s5 replacing s3.
+
+At 1761899973000 another two documents are ingested:
+
+  - s6: `{'url': 'http://xyz', 'accessed': 'Wed'}` The `url` field is marked as a version-independent field: matching the field name and value (`url=http://xyz`) against other current documents results in s6 replacing s5.
+  - s7: `{'doc_id': 'D1', 'revision': 2}` The `doc_id` field is marked as a version-independent field: matching the field name and value (`doc_id=D1`) against other current documents results in s7 replacing s1.
+
+At 1761899974000 a last two documents are ingested:
+
+  - s8: `{'doc_id': 'D2', 'revision': 1}` The `doc_id` is marked as a version-independent field, but there are no other current documents currently matching this field name and value (`doc_id=D2`).
+  - s9: `{'url': 'http://xyz', 'accessed': 'Mon'}` The `url` field is marked as a version-independent field: matching the field name and value (`url=http://xyz`) against other current documents results in s9 replacing s6.
+
+At the end of these four rounds of extraction, the following documents are considered current:
+
+  - s7
+  - s4
+  - s8
+  - s9
+
+![Current](../../images/versioning-2.png)
+
+If we were to query at timestamp 1761899972500, the following documents would be considered current:
+
+  - s1
+  - s4
+  - s5
+
+![Historical](../../images/versioning-2.png)
+
 ### Upgrading existing graph and vector stores
 
 If you have existing graph and vector stores created by a version of the graphrag-toolkit prior to version 3.14, you will need to upgrade them before using the versioned updates feature. The graphrag-toolkit includes an `upgrade_for_versioning.py` script that will upgrade a graph and vector store so that you can use versioned updates.
