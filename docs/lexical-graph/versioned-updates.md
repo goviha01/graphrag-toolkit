@@ -231,20 +231,11 @@ At 1761899974000 a last two documents are ingested:
   - s8: `{'doc_id': 'D2', 'revision': 1}` The `doc_id` is marked as a version-independent field, but there are no other current documents currently matching this field name and value (`doc_id=D2`).
   - s9: `{'url': 'http://xyz', 'accessed': 'Mon'}` The `url` field is marked as a version-independent field: matching the field name and value (`url=http://xyz`) against other current documents results in s9 replacing s6.
 
-At the end of these four rounds of extraction, the following documents are considered current:
-
-  - s7
-  - s4
-  - s8
-  - s9
+At the end of these four rounds of extraction, the following documents are considered current: s7, s4, s8, s9.
 
 ![Current](../../images/versioning-2.png)
 
-If we were to query at timestamp 1761899972500, the following documents would be considered current:
-
-  - s1
-  - s4
-  - s5
+If we were to query at timestamp 1761899972500, the following documents would be considered current: s1, s4, s5.
 
 ![Historical](../../images/versioning-2.png)
 
