@@ -174,16 +174,16 @@ class NeptuneIndex(VectorIndex):
         if not self.writeable:
             raise IndexError(f'Index {self.index_name} is read-only')
         
-        text_map = { node.node_id: node.text for node in nodes }
+        #text_map = { node.node_id: node.text for node in nodes }
         
-        for node in nodes:
-            node.metadata['index'] = self.underlying_index_name()
-            node.text = f'''index: {self.underlying_index_name()}
+        #for node in nodes:
+        #    node.metadata['index'] = self.underlying_index_name()
+        #    node.text = f'''index: {self.underlying_index_name()}
 
-{node.text}
+#{node.text}
 
-index: {self.underlying_index_name()}
-'''
+#index: {self.underlying_index_name()}
+#'''
                     
         id_to_embed_map = embed_nodes(
             nodes, self.embed_model
@@ -209,9 +209,9 @@ index: {self.underlying_index_name()}
             
             
             
-        for node in nodes:
-            node.metadata.pop('index', None)
-            node.text = text_map[node.node_id]
+        #for node in nodes:
+        #    node.metadata.pop('index', None)
+        #    node.text = text_map[node.node_id]
         
         return nodes
     
@@ -232,12 +232,12 @@ index: {self.underlying_index_name()}
             List[Dict]: A list of results where each result dictionary contains a 'score' field
                 and the fields specified in self.return_fields.
         """
-        query_str = f'''index: {self.underlying_index_name()}
+        #query_str = f'''index: {self.underlying_index_name()}
 
-{query_bundle.query_str}
-'''
+#{query_bundle.query_str}
+#'''
 
-        query_bundle = QueryBundle(query_str=query_str) 
+        #query_bundle = QueryBundle(query_str=query_str) 
         query_bundle = to_embedded_query(query_bundle, self.embed_model)
 
         tenant_specific_label = self.tenant_id.format_label(self.label).replace('`', '')
@@ -251,15 +251,17 @@ index: {self.underlying_index_name()}
         CALL neptune.algo.vectors.topKByEmbedding(
             {query_bundle.embedding},
             {{   
-                topK: {top_k * 5},
-                concurrency: 4
+                topK: {top_k},
+                concurrency: 4,
+                vertexFilter:  {{equals:{{property: "~label", value: "{tenant_specific_label}"}}}}
             }}
         )
         YIELD node, score       
-        WITH node as {self.index_name}, score WHERE '{tenant_specific_label}' in labels({self.index_name}) 
-        WITH {self.index_name}, score ORDER BY score ASC
+        // WITH node as {self.index_name}, score WHERE '{tenant_specific_label}' in labels({self.index_name}) 
+        // WITH {self.index_name}, score ORDER BY score ASC
+        WITH node as {self.index_name}, score ORDER BY score ASC
         MATCH {self.path}
-        {where_clause}
+        // {where_clause}
         RETURN {{
             score: score,
             {self.return_fields}
@@ -296,7 +298,8 @@ index: {self.underlying_index_name()}
                 n
             )
             YIELD node, embedding       
-            WITH node as {self.index_name}, embedding WHERE '{tenant_specific_label}' in labels({self.index_name}) 
+            // WITH node as {self.index_name}, embedding WHERE '{tenant_specific_label}' in labels({self.index_name}) 
+            WITH node as {self.index_name}, embedding
             MATCH {self.path}
             RETURN {{
                 embedding: embedding,
