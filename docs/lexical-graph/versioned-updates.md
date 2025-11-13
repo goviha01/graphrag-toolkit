@@ -211,7 +211,11 @@ with(
 
 ### Example
 
+The following diagram shows four rounds of extraction:
+
 ![Versioning](../../images/versioning-1.png)
+
+Documents are inserted and versioned in the following order:
 
 | extraction timestamp | source id | metadata | version independent fields | replaces |
 | --- | --- | --- | --- | --- |
@@ -225,11 +229,15 @@ with(
 | 1761899974000 | s8 | `{'doc_id': 'D2', 'revision': 1}` | `['doc_id']` | |
 | | s9 | `{'url': 'http://xyz', 'accessed': 'Mon'}` | `['url']` | s6 |
 
-At the end of these four rounds of extraction, the following documents are considered current: s7, s4, s8, s9.
+#### Querying current documents
+
+At the end of these four rounds of extraction, the documents s7, s4, s8, s9 are considered current:
 
 ![Current](../../images/versioning-2.png)
 
-If we were to query at timestamp 1761899972500, the following documents would be considered current: s1, s4, s5.
+#### Querying at a point in time
+
+If we were to query at timestamp 1761899972500, documents s1, s4, s5 would be considered current: s1, s4, s5:
 
 ![Historical](../../images/versioning-3.png)
 
