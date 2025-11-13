@@ -266,8 +266,7 @@ class NeptuneIndex(VectorIndex):
                 n
             )
             YIELD node, embedding       
-            // WITH node as {self.index_name}, embedding WHERE '{tenant_specific_label}' in labels({self.index_name}) 
-            WITH node as {self.index_name}, embedding
+            WITH node as {self.index_name}, embedding WHERE '{tenant_specific_label}' in labels({self.index_name}) 
             MATCH {self.path}
             RETURN {{
                 embedding: embedding,
