@@ -213,6 +213,18 @@ with(
 
 ![Versioning](../../images/versioning-1.png)
 
+| extraction timestamp | source id | metadata | version independent fields | replaces |
+| --- | --- | --- | --- | --- |
+| 1761899971000 | s1 | `{'doc_id': 'D1', 'revision': 1}` | | |
+| | s2 | `{'title': 'T1', 'app': 'app_01', 'month': '06'}` | | |
+| | s3 | `{'url': 'http://xyz', 'accessed': 'Mon'}` | | |
+| 1761899972000 | s4 | `{'title': 'T1', 'app': 'app_01', 'month': '07'}` | `['title', 'app']` | s2 |
+| | s5 | `{'url': 'http://xyz', 'accessed': 'Tues'}` | `['url']` | s3 |
+| 1761899973000 | s6 | `{'url': 'http://xyz', 'accessed': 'Wed'}` | `['url']` | s5 |
+| | s7 | `{'doc_id': 'D1', 'revision': 2}` | `['doc_id']` | s1 |
+| 1761899974000 | s8 | `{'doc_id': 'D2', 'revision': 1}` | `['doc_id']` | |
+| | s9 | `{'url': 'http://xyz', 'accessed': 'Mon'}` | `['url']` | s6 |
+
 At timestamp 1761899971000 documents with the following source ids and metadata are ingested into an empty graph:
 
   - s1: `{'doc_id': 'D1', 'revision': 1}` The `doc_id` is marked as a version-independent field, but there are no other current documents matching this field name and value (`doc_id=D2`).
@@ -244,7 +256,7 @@ If we were to query at timestamp 1761899972500, the following documents would be
 
 ### Upgrading existing graph and vector stores
 
-If you have existing graph and vector stores created by a version of the graphrag-toolkit prior to version 3.14, you will need to upgrade them before using the versioned updates feature. The graphrag-toolkit includes an `upgrade_for_versioning.py` script that will upgrade a graph and vector store so that you can use versioned updates.
+If you have existing graph and vector stores created by a version of the graphrag-toolkit prior to version 3.14.x, you will need to upgrade them before using the versioned updates feature. The graphrag-toolkit includes an `upgrade_for_versioning.py` script that will upgrade a graph and vector store so that you can use versioned updates.
 
 > Do not index any documenst while the upgrade script is running.
 
