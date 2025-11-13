@@ -231,13 +231,13 @@ Documents are inserted and versioned in the following order:
 
 #### Querying current documents
 
-At the end of these four rounds of extraction, the documents s7, s4, s8, s9 are considered current:
+At the end of these four rounds of extraction, the documents s7, s4, s8 and s9 are considered current:
 
 ![Current](../../images/versioning-2.png)
 
 #### Querying at a point in time
 
-If we were to query at timestamp 1761899972500, documents s1, s4, s5 would be considered current: s1, s4, s5:
+If we were to query at timestamp 1761899972500, documents s1, s4 and s5 would be considered current:
 
 ![Historical](../../images/versioning-3.png)
 

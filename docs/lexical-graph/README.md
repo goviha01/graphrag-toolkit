@@ -6,6 +6,7 @@
   - [Indexing](./indexing.md) 
     - [Batch Extraction](./batch-extraction.md) 
     - [Configuring Batch Extraction](./configuring-batch-extraction.md)
+    - [Versioned Updates](./versioned-updates.md)
   - [Querying](./querying.md) 
     - [Traversal-Based Search](./traversal-based-search.md)
     - [Traversal-Based Search Configuration](./traversal-based-search-configuration.md)
