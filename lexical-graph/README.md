@@ -10,6 +10,8 @@ The lexical-graph package provides a framework for automating the construction o
   - Easily extended to support additional graph and vector stores and model backends.
   - [Multi-tenancy](../docs/lexical-graph/multi-tenancy.md) – multiple separate lexical graphs in the same underlying graph and vector stores.
   - Continuous ingest and [batch extraction](../docs/lexical-graph/batch-extraction.md) (using [Bedrock batch inference](https://docs.aws.amazon.com/bedrock/latest/userguide/batch-inference.html)) modes.
+  - [Versioned updates](../docs/lexical-graph/versioned-updates.md) for updating source documents and querying the state of the graph and vector stores at a
+point in time.
   - Quickstart [AWS CloudFormation templates](../examples/lexical-graph/cloudformation-templates/) for Neptune Database, OpenSearch Serverless, and Amazon Aurora Postgres.
 
 ## Installation

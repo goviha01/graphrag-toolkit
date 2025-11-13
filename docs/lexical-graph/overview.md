@@ -10,6 +10,7 @@ The graphrag-toolkit [lexical-graph](../../lexical-graph/) library provides a fr
     - [Querying](#querying)
   - [Multi tenancy](#multi-tenancy)
   - [Metadata filtering](#metadata-filtering)
+  - [Versioned updates](#versioned-updates)
   - [Model Context Protocol server](#model-context-protocol-server)
   - [Security](#security)
   - [Hybrid deployment](#hybrid-deployment)
@@ -70,6 +71,10 @@ There are two parts to metadata filtering:
   - **Querying** Supply metadata filters when querying a lexical graph
   
 Metadata filtering can also be used to [filter documents and chunks during the extract and build stages](./metadata-filtering.md#using-metadata-to-filter-documents-in-the-extract-and-build-stages) of the indexing process.
+
+#### Versioned updates
+
+The lexical graphs supports [versioned updates](./versioned-updates.mds). With versioned updates, if you re-ingest a document whose contents and/or metadata have changed since it was last extracted, any old documents will be archived, and the newly ingested document treated as the current version of the source document. You can then query the current state of the graph and vector stores, or configure the query to retrieve documents that were current at a specific point in time.
 
 ### Model Context Protocol server
 

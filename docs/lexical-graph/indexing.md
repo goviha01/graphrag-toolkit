@@ -14,6 +14,7 @@
     - [Custom prompts](#custom-prompts)
     - [Batch extraction](#batch-extraction)
     - [Metadata filtering](#metadata-filtering)
+    - [Versioned updates](#versioned-updates)
     - [Checkpoints](#checkpoints)
     
 ### Overview
@@ -355,6 +356,10 @@ You can use [Amazon Bedrock batch inference](https://docs.aws.amazon.com/bedrock
 #### Metadata filtering
 
 You can add metadata to source documents on ingest, and then use this metadata to filter documents during the extract and build stages. Source metadata is also used for metadata filtering when querying a lexical graph. See the [Metadata Filtering](./metadata-filtering.md) section for more details.
+
+#### Versioned updates
+
+The lexical graphs supports [versioned updates](./versioned-updates.mds). With versioned updates, if you re-ingest a document whose contents and/or metadata have changed since it was last extracted, any old documents will be archived, and the newly ingested document treated as the current version of the source document.
 
 #### Checkpoints
 
