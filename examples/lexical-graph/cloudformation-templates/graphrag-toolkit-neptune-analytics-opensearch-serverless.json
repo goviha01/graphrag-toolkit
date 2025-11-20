@@ -37,6 +37,8 @@
 			"Default": "ml.m5.xlarge",
 			"AllowedValues": [
 				"ml.m5.xlarge",
+        "ml.m5.2xlarge",
+        "ml.m5.4xlarge",
 				"ml.p3.2xlarge"
 			],
 			"ConstraintDescription": "Must be a valid SageMaker instance type."
@@ -748,7 +750,7 @@
 										"echo \"export EXTRACTION_MODEL=",
 										{
 											"Fn::Sub": [
-												"${regionPrefix}.anthropic.claude-3-7-sonnet-20250219-v1:0",
+												"${regionPrefix}.anthropic.claude-sonnet-4-20250514-v1:0",
 												{
 													"partition": {
 														"Ref": "AWS::Partition"
@@ -781,7 +783,7 @@
 										"echo \"export RESPONSE_MODEL=",
 										{
 											"Fn::Sub": [
-												"${regionPrefix}.anthropic.claude-3-7-sonnet-20250219-v1:0",
+												"${regionPrefix}.anthropic.claude-sonnet-4-20250514-v1:0",
 												{
 													"partition": {
 														"Ref": "AWS::Partition"
@@ -812,7 +814,7 @@
 										"echo \"export EVALUATION_MODEL=",
 										{
 											"Fn::Sub": [
-												"${regionPrefix}.anthropic.claude-3-7-sonnet-20250219-v1:0",
+												"${regionPrefix}.anthropic.claude-sonnet-4-20250514-v1:0",
 												{
 													"partition": {
 														"Ref": "AWS::Partition"
@@ -988,7 +990,7 @@
 										"  echo \"export EXTRACTION_MODEL=",
 										{
 											"Fn::Sub": [
-												"${regionPrefix}.anthropic.claude-3-7-sonnet-20250219-v1:0",
+												"${regionPrefix}.anthropic.claude-sonnet-4-20250514-v1:0",
 												{
 													"partition": {
 														"Ref": "AWS::Partition"
@@ -1021,7 +1023,7 @@
 										"  echo \"export RESPONSE_MODEL=",
 										{
 											"Fn::Sub": [
-												"${regionPrefix}.anthropic.claude-3-7-sonnet-20250219-v1:0",
+												"${regionPrefix}.anthropic.claude-sonnet-4-20250514-v1:0",
 												{
 													"partition": {
 														"Ref": "AWS::Partition"
@@ -1052,7 +1054,7 @@
 										"  echo \"export EVALUATION_MODEL=",
 										{
 											"Fn::Sub": [
-												"${regionPrefix}.anthropic.claude-3-7-sonnet-20250219-v1:0",
+												"${regionPrefix}.anthropic.claude-sonnet-4-20250514-v1:0",
 												{
 													"partition": {
 														"Ref": "AWS::Partition"

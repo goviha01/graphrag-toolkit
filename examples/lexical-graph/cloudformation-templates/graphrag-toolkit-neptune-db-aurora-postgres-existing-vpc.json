@@ -44,14 +44,15 @@
 				"db.serverless",
 				"db.r8g.large",
 				"db.r8g.xlarge",
-				"db.r8g.2xlarge"
+				"db.r8g.2xlarge",
+        "db.r8g.4xlarge"
 			],
 			"ConstraintDescription": "Must be a valid Neptune instance type."
 		},
 		"NeptuneEngineVersion": {
 			"Description": "Neptune DB engine version",
 			"Type": "String",
-			"Default": "1.4.5.1"
+			"Default": "1.4.6.2"
 		},
 		"MinNCU": {
 			"Description": "Min number of NCUs (default 2.5, relevant only when instance type is db.serverless).",
@@ -113,6 +114,8 @@
 			"Default": "ml.m5.xlarge",
 			"AllowedValues": [
 				"ml.m5.xlarge",
+        "ml.m5.2xlarge",
+        "ml.m5.4xlarge",
 				"ml.p3.2xlarge"
 			],
 			"ConstraintDescription": "Must be a valid SageMaker instance type."
@@ -1458,7 +1461,7 @@
 										"echo \"export EXTRACTION_MODEL=",
 										{
 											"Fn::Sub": [
-												"${regionPrefix}.anthropic.claude-3-7-sonnet-20250219-v1:0",
+												"${regionPrefix}.anthropic.claude-sonnet-4-20250514-v1:0",
 												{
 													"partition": {
 														"Ref": "AWS::Partition"
@@ -1491,7 +1494,7 @@
 										"echo \"export RESPONSE_MODEL=",
 										{
 											"Fn::Sub": [
-												"${regionPrefix}.anthropic.claude-3-7-sonnet-20250219-v1:0",
+												"${regionPrefix}.anthropic.claude-sonnet-4-20250514-v1:0",
 												{
 													"partition": {
 														"Ref": "AWS::Partition"
@@ -1522,7 +1525,7 @@
 										"echo \"export EVALUATION_MODEL=",
 										{
 											"Fn::Sub": [
-												"${regionPrefix}.anthropic.claude-3-7-sonnet-20250219-v1:0",
+												"${regionPrefix}.anthropic.claude-sonnet-4-20250514-v1:0",
 												{
 													"partition": {
 														"Ref": "AWS::Partition"
@@ -1725,7 +1728,7 @@
 										"  echo \"export EXTRACTION_MODEL=",
 										{
 											"Fn::Sub": [
-												"${regionPrefix}.anthropic.claude-3-7-sonnet-20250219-v1:0",
+												"${regionPrefix}.anthropic.claude-sonnet-4-20250514-v1:0",
 												{
 													"partition": {
 														"Ref": "AWS::Partition"
@@ -1758,7 +1761,7 @@
 										"  echo \"export RESPONSE_MODEL=",
 										{
 											"Fn::Sub": [
-												"${regionPrefix}.anthropic.claude-3-7-sonnet-20250219-v1:0",
+												"${regionPrefix}.anthropic.claude-sonnet-4-20250514-v1:0",
 												{
 													"partition": {
 														"Ref": "AWS::Partition"
@@ -1789,7 +1792,7 @@
 										"  echo \"export EVALUATION_MODEL=",
 										{
 											"Fn::Sub": [
-												"${regionPrefix}.anthropic.claude-3-7-sonnet-20250219-v1:0",
+												"${regionPrefix}.anthropic.claude-sonnet-4-20250514-v1:0",
 												{
 													"partition": {
 														"Ref": "AWS::Partition"
