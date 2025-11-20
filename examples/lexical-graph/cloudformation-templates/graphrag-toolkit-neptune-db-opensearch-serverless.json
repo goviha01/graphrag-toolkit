@@ -15,7 +15,7 @@
 			"Type": "String",
 			"Default": "1.4.6.2"
 		},
-		"DbInstanceType": {
+		"NeptuneDbInstanceType": {
 			"Description": "Neptune DB instance type (use db.serverless to provision a Neptune Serverless cluster)",
 			"Type": "String",
 			"Default": "db.r8g.large",
@@ -91,7 +91,7 @@
 					},
 					"Parameters": [
 						"NeptuneEngineVersion",
-						"DbInstanceType",
+						"NeptuneDbInstanceType",
 						"MinNCU",
 						"MaxNCU",
 						"EnableAuditLog"
@@ -935,7 +935,7 @@
 					"Ref": "NeptuneDBCluster"
 				},
 				"DBInstanceClass": {
-					"Ref": "DbInstanceType"
+					"Ref": "NeptuneDbInstanceType"
 				},
 				"DBParameterGroupName": {
 					"Ref": "NeptuneDBParameterGroup"
