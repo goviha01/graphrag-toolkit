@@ -23,7 +23,7 @@
 				"db.serverless",
 				"db.r8g.large",
 				"db.r8g.xlarge",
-				"db.r8g.2xlarge"
+				"db.r8g.2xlarge",
         "db.r8g.4xlarge"
 			],
 			"ConstraintDescription": "Must be a valid Neptune instance type."
