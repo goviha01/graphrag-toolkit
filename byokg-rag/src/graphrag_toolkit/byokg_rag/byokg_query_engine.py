@@ -113,7 +113,7 @@ class ByoKGQueryEngine:
                 seen.add(item)
 
     
-    def query(self, query: str, iterations: int = 2, cypher_iterations: int = 2) -> Tuple[List[str], List[str]]:
+    def query(self, query: str, iterations: int = 2, cypher_iterations: int = 2, user_input: str = "") -> Tuple[List[str], List[str]]:
         """
         Process a query through the retrieval and generation pipeline.
 
@@ -121,6 +121,7 @@ class ByoKGQueryEngine:
             query: The search query
             iterations: Number of retrieval iterations to perform
             cypher_iterations: Number of cypher generation retries
+            user_input: Optional user input for additional instructions or context
 
         Returns:
             Tuple of (retrieved context, final answers)
@@ -148,7 +149,8 @@ class ByoKGQueryEngine:
                     question=query,
                     schema=self.schema,
                     graph_context="\n".join(cypher_context_with_feedback) if cypher_context_with_feedback else "",
-                    task_prompts = self.cypher_kg_linker.task_prompts
+                    task_prompts = self.cypher_kg_linker.task_prompts,
+                    user_input=user_input
                 )
                 artifacts = self.cypher_kg_linker.parse_response(response)
 
@@ -185,7 +187,8 @@ class ByoKGQueryEngine:
                 question=query,
                 schema=self.schema,
                 graph_context="\n".join(retrieved_context) if retrieved_context else "",
-                task_prompts = task_prompts
+                task_prompts = task_prompts,
+                user_input=user_input
             )
             artifacts = self.kg_linker.parse_response(response)
 
@@ -225,13 +228,14 @@ class ByoKGQueryEngine:
                 break
         return cypher_context_with_feedback + retrieved_context
 
-    def generate_response(self, query: str, graph_context: str = "", task_prompt = None) -> Tuple[List[str], str]:
+    def generate_response(self, query: str, graph_context: str = "", task_prompt = None, user_input: str = "") -> Tuple[List[str], str]:
         
         if task_prompt is None:
             task_prompt = load_yaml("prompts/generation_prompts.yaml")["generate-response-qa"]
             user_prompt_formatted = task_prompt.format(
                 question=query, 
-                graph_context=graph_context
+                graph_context=graph_context,
+                user_input=user_input
             )
             response =  self.llm_generator.generate(
                 prompt=user_prompt_formatted, 

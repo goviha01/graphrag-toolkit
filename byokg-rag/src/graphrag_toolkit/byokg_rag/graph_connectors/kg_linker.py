@@ -80,7 +80,7 @@ class KGLinker:
 
         return task_prompts
 
-    def generate_response(self, question: str, schema: str, graph_context: str = "", task_prompts: Optional[str] = None) -> str:
+    def generate_response(self, question: str, schema: str, graph_context: str = "", task_prompts: Optional[str] = None, user_input: str = "") -> str:
         """
         Generate an LLM response for the given query and context.
 
@@ -89,6 +89,7 @@ class KGLinker:
             schema: Graph schema information
             graph_context: Retrieved graph context
             task_prompts: Optional custom task prompts
+            user_input: Optional user input for additional instructions or context
 
         Returns:
             str: Generated LLM response
@@ -106,7 +107,8 @@ class KGLinker:
         user_prompt_formatted = user_prompt.format(
             question=question, 
             schema=schema, 
-            graph_context=graph_context
+            graph_context=graph_context,
+            user_input=user_input
         )
         return self.llm_generator.generate(
             prompt=user_prompt_formatted, 
