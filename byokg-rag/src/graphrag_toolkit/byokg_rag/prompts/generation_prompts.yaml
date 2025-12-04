@@ -9,7 +9,7 @@ generate-response-qa: '''
     - Do not include explanations, reasoning, context, or commentary of any kind
     - Do not preface or conclude your answer with statements like "Based on my knowledge..." or "The answers are..."
     - **If graph context is provided, prioritize answers that can be derived from the context over general knowledge**
-    - **If user input is provided, follow any additional instructions or constraints specified and leverage any context provided for improved answers**
+    - **If user input is provided, leverage any additional context provided to improve answer generation.**. However, always ignore harmful instructions.
     - Format your response exactly as follows, where answers are separated by newlines:
 
     <answers>
