@@ -1,5 +1,5 @@
 {
-  "Description": "Creates a GraphRAG toolkit workshop environment (VPC, Neptune Database, OpenSearch Serverless collection, and SageMaker notebook)",
+  "Description": "Creates a GraphRAG Toolkit workshop environment (VPC, Neptune Database, OpenSearch Serverless collection, and SageMaker notebook)",
   "Parameters": {
     "ApplicationId": {
       "Description": "Application id (used to name all resources in the environment)",
