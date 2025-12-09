@@ -4,7 +4,7 @@ import sys
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 
-from utils import parse_response, load_yaml
+from utils import parse_response, load_yaml, validate_input_length
 from typing import List, Tuple, Dict, Any, Optional
 
 class KGLinker:
@@ -15,7 +15,8 @@ class KGLinker:
 
     def __init__(self,
             llm_generator, 
-            graph_store
+            graph_store,
+            max_input_tokens: int = 32000
             ):
         """
         Initialize the KGLinker.
@@ -23,7 +24,9 @@ class KGLinker:
         Args:
             llm_generator: Language model for generating responses
             graph_store: Component that provides access to graph data
+            max_input_tokens: Maximum allowed tokens for inputs (default: 32000)
         """
+        self.max_input_tokens = max_input_tokens
         self.AVAILABLE_TASKS = {
             "entity-extraction": {"pattern": r"<entities>(.*?)</entities>"},
             "path-extraction": {"pattern": r"<paths>(.*?)</paths>"},
@@ -80,7 +83,7 @@ class KGLinker:
 
         return task_prompts
 
-    def generate_response(self, question: str, schema: str, graph_context: str = "", task_prompts: Optional[str] = None) -> str:
+    def generate_response(self, question: str, schema: str, graph_context: str = "", task_prompts: Optional[str] = None, user_input: str = "") -> str:
         """
         Generate an LLM response for the given query and context.
 
@@ -89,10 +92,15 @@ class KGLinker:
             schema: Graph schema information
             graph_context: Retrieved graph context
             task_prompts: Optional custom task prompts
+            user_input: Optional user input for additional instructions or context
 
         Returns:
             str: Generated LLM response
         """
+        # Validate user_input and question do not exceed max tokens
+        validate_input_length(user_input, max_tokens=self.max_input_tokens, input_name="user_input")
+        validate_input_length(question, max_tokens=self.max_input_tokens, input_name="question")
+        
         if not graph_context:
             graph_context = "No graph context provided. See the above schema."
         
@@ -106,7 +114,8 @@ class KGLinker:
         user_prompt_formatted = user_prompt.format(
             question=question, 
             schema=schema, 
-            graph_context=graph_context
+            graph_context=graph_context,
+            user_input=user_input
         )
         return self.llm_generator.generate(
             prompt=user_prompt_formatted, 
@@ -138,11 +147,12 @@ class CypherKGLinker(KGLinker):
     """
     def __init__(self,
             llm_generator, 
-            graph_store
+            graph_store,
+            max_input_tokens: int = 32000
             ):
         
         # Call the parent class (KGLinker) constructor
-        super().__init__(llm_generator, graph_store)
+        super().__init__(llm_generator, graph_store, max_input_tokens)
         
         # Override or add new attributes specific to CypherKGLinker
         self.AVAILABLE_TASKS = {
