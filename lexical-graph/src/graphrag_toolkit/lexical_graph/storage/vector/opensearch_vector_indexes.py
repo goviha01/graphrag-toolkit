@@ -23,6 +23,8 @@ from graphrag_toolkit.lexical_graph.storage.constants import INDEX_KEY
 
 logger = logging.getLogger(__name__)
 
+MAX_ID_BATCH_SIZE = 50000
+
 try:
     from llama_index.vector_stores.opensearch import OpensearchVectorClient
     from opensearchpy.exceptions import NotFoundError, RequestError
@@ -855,7 +857,7 @@ class OpenSearchIndex(VectorIndex):
                         time.sleep(5)
                         response = None
                 except Exception as ee:
-                    logger.error(f'Error while conducting search with client: {client}')
+                    logger.error(f'Error while conducting search with client: {str(ee)}')
                     raise e
 
             hits = response['hits']['hits']
@@ -909,13 +911,22 @@ class OpenSearchIndex(VectorIndex):
         Returns:
             List: A list of embedding data corresponding to the provided IDs.
         """
-        query = {
-            "terms": {
-                f'metadata.{INDEX_KEY}.key': [self._clean_id(i) for i in set(ids)]
-            }
-        }
+        results = []
 
-        results = self.get_all_embeddings(query, max_results=len(ids) * 2)
+        id_batches = [
+            ids[x:x+MAX_ID_BATCH_SIZE] 
+            for x in range(0, len(ids), MAX_ID_BATCH_SIZE)
+        ]
+
+        for id_batch in id_batches:
+
+            query = {
+                "terms": {
+                    f'metadata.{INDEX_KEY}.key': [self._clean_id(i) for i in set(id_batch)]
+                }
+            }
+
+            results.extend(self.get_all_embeddings(query, max_results=len(id_batch) * 2))
         
         return results
     
@@ -978,17 +989,24 @@ class OpenSearchIndex(VectorIndex):
 
     
     def _get_existing_doc_ids_for_ids(self, ids:List[str]=[]):
-   
-        query = {
-            "terms": {
-                f'metadata.{INDEX_KEY}.key': [self._clean_id(i) for i in set(ids)]
-            }
-        }
-    
+
         all_results = []
+
+        id_batches = [
+            ids[x:x+MAX_ID_BATCH_SIZE] 
+            for x in range(0, len(ids), MAX_ID_BATCH_SIZE)
+        ]
+
+        for id_batch in id_batches:
+   
+            query = {
+                "terms": {
+                    f'metadata.{INDEX_KEY}.key': [self._clean_id(i) for i in set(id_batch)]
+                }
+            }
         
-        for page in self.paginated_search(query, page_size=10000, ids_only=True):
-            all_results.extend(hit for hit in page)
+            for page in self.paginated_search(query, page_size=10000, ids_only=True):
+                all_results.extend(hit for hit in page)
         
         doc_id_map = {}
         
