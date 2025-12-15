@@ -677,7 +677,7 @@ class LexicalGraphIndex():
                 valid_to: coalesce(source.{VALID_TO}, {TIMESTAMP_LOWER_BOUND}),
                 extract_timestamp: coalesce(source.{EXTRACT_TIMESTAMP}, {TIMESTAMP_LOWER_BOUND}),
                 build_timestamp: coalesce(source.{BUILD_TIMESTAMP}, {TIMESTAMP_LOWER_BOUND}),
-                id_fields: split(coalesce(s.{VERSION_INDEPENDENT_ID_FIELDS}, ""), ";")
+                id_fields: split(coalesce(source.{VERSION_INDEPENDENT_ID_FIELDS}, ""), ";")
             }}  
         }} AS result {order_by_clause}
         '''
