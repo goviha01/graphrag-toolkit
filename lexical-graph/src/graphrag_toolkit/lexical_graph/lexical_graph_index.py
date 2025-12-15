@@ -589,6 +589,42 @@ class LexicalGraphIndex():
         sink_fn = sink if not handler else Pipe(handler)
         nodes | extraction_pipeline | build_pipeline | sink_fn
 
+    def get_stats(self) -> Dict[str, Any]:
+
+        stats = {}
+
+        labels = ['Source', 'Chunk', 'Topic', 'Statement', 'Fact', 'Entity']
+
+        for label in labels:
+            cypher = f'MATCH (n:`__{label}__`) RETURN count(n) AS count'
+            results = self.graph_store.execute_query(cypher)
+            stats[label.lower()] = results[0]['count']
+        
+        cypher = """MATCH (t:`__Topic__`)-[r:`__MENTIONED_IN__`]->()
+        WITH t, count(r) AS connectingNumChunks WHERE connectingNumChunks > 1
+        RETURN count(t) AS numTopics, connectingNumChunks ORDER BY connectingNumChunks DESC"""
+
+        results = self.graph_store.execute_query(cypher)
+
+        stats['numChunksPerTopic'] = results
+
+        cypher = """MATCH (f:`__Fact__`)-[r:`__SUPPORTS__`]->()
+        WITH f, count(r) AS connectingNumStatements WHERE connectingNumStatements > 1
+        RETURN count(f) AS numFacts, connectingNumStatements ORDER BY connectingNumStatements DESC"""
+
+        results = self.graph_store.execute_query(cypher)
+
+        stats['numStatementsPerFact'] = results
+
+        localConnectivity = round(sum([i['connectingNumChunks'] * i['numTopics'] for i in stats['numChunksPerTopic']]) / stats['topic'], 5)
+        globalConnectivity = round(sum([i['connectingNumStatements'] * i['numFacts'] for i in stats['numStatementsPerFact']]) / stats['fact'], 5)
+
+        stats['localConnectivity'] = localConnectivity
+        stats['globalConnectivity'] = globalConnectivity
+
+
+        return stats
+
     @overload
     def get_sources(self, source_id:str=None, order_by:str=None) -> Dict[str, Any]:
         ...
