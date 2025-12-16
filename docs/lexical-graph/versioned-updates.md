@@ -12,7 +12,7 @@
     - [Querying](#querying)
     - [Combining versioned updates with metadata filtering](#combining-versioned-updates-with-metadata-filtering)
   - [Example](#example)
-  - [Inspecting source metadata]
+  - [Inspecting source metadata](#inspecting-source-metadata)
     - [Get details of all source nodes](#get-details-of-all-source-nodes)
     - [Get details of all current source nodes](#get-details-of-all-current-source-nodes)
     - [Get details of all previous source nodes](#get-details-of-all-previous-source-nodes)
