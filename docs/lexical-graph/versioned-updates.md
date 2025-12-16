@@ -276,6 +276,101 @@ with (
     print(json.dumps(sources, indent=2))
 ```
 
+The results are formatted like this:
+
+```json
+[
+  {
+    "metadata": {
+      "file_path": "/home/myuser/docs/readme.md",
+      "creation_date": "2025-12-16T00:00:00.000Z",
+      "file_name": "readme.md",
+      "title": "How to play",
+      "file_size": 93,
+      "last_modified_date": "2025-12-16T00:00:00.000Z",
+      "file_type": "text/markdown",
+      "version": "v1"
+    },
+    "versioning": {
+      "build_timestamp": 1765880067513,
+      "id_fields": [
+        "file_name"
+      ],
+      "valid_from": 1761899971000,
+      "valid_to": 1761899972000,
+      "extract_timestamp": 1765880063557
+    },
+    "sourceId": "aws:tenant123:31141440:6de6"
+  },
+  {
+    "metadata": {
+      "file_path": "/home/myuser/docs/readme.md",
+      "creation_date": "2025-12-16T00:00:00.000Z",
+      "file_name": "readme.md",
+      "title": "How to play",
+      "file_size": 91,
+      "last_modified_date": "2025-12-16T00:00:00.000Z",
+      "file_type": "text/markdown",
+      "version": "v2"
+    },
+    "versioning": {
+      "build_timestamp": 1765880102994,
+      "id_fields": [
+        "file_name"
+      ],
+      "valid_from": 1761899972000,
+      "valid_to": 1761899973000,
+      "extract_timestamp": 1765880098515
+    },
+    "sourceId": "aws:tenant123:34570f12:0726"
+  },
+  {
+    "metadata": {
+      "file_path": "/home/myuser/docs/readme.md",
+      "creation_date": "2025-12-16T00:00:00.000Z",
+      "file_name": "readme.md",
+      "title": "How to play",
+      "file_size": 93,
+      "last_modified_date": "2025-12-16T00:00:00.000Z",
+      "file_type": "text/markdown",
+      "version": "v3"
+    },
+    "versioning": {
+      "build_timestamp": 1765880173432,
+      "id_fields": [
+        "file_name"
+      ],
+      "valid_from": 1761899973000,
+      "valid_to": 1761899974000,
+      "extract_timestamp": 1765880166001
+    },
+    "sourceId": "aws:tenant123:07ca52e6:8960"
+  },
+  {
+    "metadata": {
+      "file_path": "/home/myuser/docs/readme.md",
+      "creation_date": "2025-12-16T00:00:00.000Z",
+      "file_name": "readme.md",
+      "title": "How to play",
+      "file_size": 83,
+      "last_modified_date": "2025-12-16T00:00:00.000Z",
+      "file_type": "text/markdown",
+      "version": "v4"
+    },
+    "versioning": {
+      "build_timestamp": 1765880242134,
+      "id_fields": [
+        "file_name"
+      ],
+      "valid_from": 1761899974000,
+      "valid_to": 10000000000000,
+      "extract_timestamp": 1765880236433
+    },
+    "sourceId": "aws:tenant123:7a54612d:57b8"
+  }
+]
+```
+
 #### Get details of all current source nodes
 
 ```python
