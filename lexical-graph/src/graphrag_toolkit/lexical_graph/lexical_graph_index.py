@@ -9,7 +9,7 @@ from graphrag_toolkit.lexical_graph import GraphRAGConfig
 from graphrag_toolkit.lexical_graph.tenant_id import TenantId, TenantIdType, DEFAULT_TENANT_ID, to_tenant_id
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig, SourceMetadataFormatter, DefaultSourceMetadataFormatter, MetadataFiltersType
 from graphrag_toolkit.lexical_graph.metadata import to_metadata_filter
-from graphrag_toolkit.lexical_graph.versioning import VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSIONING_METADATA_KEYS, VERSION_INDEPENDENT_ID_FIELDS, TIMESTAMP_UPPER_BOUND, TIMESTAMP_LOWER_BOUND
+from graphrag_toolkit.lexical_graph.versioning import VersioningConfig, VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSIONING_METADATA_KEYS, VERSION_INDEPENDENT_ID_FIELDS, TIMESTAMP_UPPER_BOUND, TIMESTAMP_LOWER_BOUND
 from graphrag_toolkit.lexical_graph.storage import GraphStoreFactory, GraphStoreType
 from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory, VectorStoreType
 from graphrag_toolkit.lexical_graph.storage.graph import MultiTenantGraphStore
@@ -626,45 +626,80 @@ class LexicalGraphIndex():
         return stats
 
     @overload
-    def get_sources(self, source_id:str=None, order_by:str=None) -> Dict[str, Any]:
+    def get_sources(self, 
+                    source_id:str=None, 
+                    versioning_config:VersioningConfig=None, 
+                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
         ...
     
     @overload
-    def get_sources(self, source_ids:List[str]=[]) -> Dict[str, Any]:
+    def get_sources(self, 
+                    source_ids:List[str]=None, 
+                    versioning_config:VersioningConfig=None, 
+                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
         ...
 
     @overload
-    def get_sources(self, filter:FilterConfig=None) -> Dict[str, Any]:
+    def get_sources(self, 
+                    filter:FilterConfig=None, 
+                    versioning_config:VersioningConfig=None, 
+                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
         ...
 
     @overload
-    def get_sources(self, filter:Dict[str, Any]={}) -> Dict[str, Any]:
+    def get_sources(self, 
+                    filter:Dict[str, Any]=None, 
+                    versioning_config:VersioningConfig=None, 
+                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
         ...
 
     @overload
-    def get_sources(self, filter:List[Dict[str, Any]]=[]) -> Dict[str, Any]:
+    def get_sources(self, 
+                    filter:List[Dict[str, Any]]=None, 
+                    versioning_config:VersioningConfig=None, 
+                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
         ...
 
-    def get_sources(self, source_info=None, order_by=None) -> Dict[str, Any]:
+    def get_sources(self,
+                    source_id:str=None,
+                    source_ids:List[str]=None,
+                    filter:Union[FilterConfig, Dict[str, Any], List[Dict[str, Any]]]=None,
+                    versioning_config:VersioningConfig=None,
+                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
 
-        where_clause = ''
+        source_where_clause = None
+        metadata_where_clause = None
+        order_by_clause = ''
         parameters = {}
 
-        order_by_clause = f'result.metadata.{order_by},' if order_by else ''
+        if order_by:
+            order_by = [order_by] if isinstance(order_by, str) else order_by
+            order_by_clause = ' '.join([f'result.metadata.{o},' for o in order_by])
+
         order_by_clause = f'ORDER BY {order_by_clause} result.versioning.valid_from ASC'
 
-        if source_info:
+        source_ids = source_id or source_ids
+        
+        if source_ids:
+            source_ids = [source_ids] if isinstance(source_ids, str) else source_ids
+            source_where_clause = f'({self.graph_store.node_id("source.sourceId")} in $sourceIds)'
+            parameters['sourceIds'] = source_ids
 
-            if isinstance(source_info, str):
-                source_info = [source_info]
+        filter = filter or FilterConfig()
+        versioning_config = versioning_config or VersioningConfig()
+        
+        filter_config = to_metadata_filter(filter)
+        filter_config = versioning_config.apply(filter_config)
+        
+        metadata_where_clause = filter_config_to_opencypher_filters(filter_config)
 
-            if isinstance(source_info, list) and isinstance(source_info[0], str):
-                where_clause = f'WHERE {self.graph_store.node_id("source.sourceId")} in $sourceIds'
-                parameters['sourceIds'] = source_info
-            else:
-                source_info = to_metadata_filter(source_info)
-                where_clause =  filter_config_to_opencypher_filters(source_info)
-                where_clause = f'WHERE {where_clause}' if where_clause else ''
+        where_clause = ''
+        if source_where_clause and metadata_where_clause:
+            where_clause = f'WHERE {source_where_clause} AND {metadata_where_clause}'
+        elif source_where_clause:
+            where_clause = f'WHERE {source_where_clause}'
+        elif metadata_where_clause:
+            where_clause = f'WHERE {metadata_where_clause}'
 
         cypher = f'''// get source info from source ids
         MATCH (source:`__Source__`)

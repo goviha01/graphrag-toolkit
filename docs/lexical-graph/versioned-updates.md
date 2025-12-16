@@ -12,6 +12,11 @@
     - [Querying](#querying)
     - [Combining versioned updates with metadata filtering](#combining-versioned-updates-with-metadata-filtering)
   - [Example](#example)
+  - [Inspecting source metadata]
+    - [Get details of all source nodes](#get-details-of-all-source-nodes)
+    - [Get details of all current source nodes](#get-details-of-all-current-source-nodes)
+    - [Get details of all previous source nodes](#get-details-of-all-previous-source-nodes)
+    - [Get details of previous versions of files with specific metadata](#get-details-of-previous-versions-of-files-with-specific-metadata)
   - [Upgrading existing graph and vector stores](#upgrading-existing-graph-and-vector-stores)
     - [Upgrading specific tenants](#upgrading-specific-tenants)
     - [Upgrading specific vector indexes](#upgrading-specific-vector-indexes)
@@ -240,6 +245,129 @@ At the end of these four rounds of extraction, the documents s7, s4, s8 and s9 a
 If we were to query at timestamp 1761899972500, documents s1, s4 and s5 would be considered current:
 
 ![Historical](../../images/versioning-3.png)
+
+### Inspecting source metadata
+
+You can inspect the metadata and versioining infomration attached to source nodes using the `LexicalGraphIndex.get_sources()` method.
+
+#### Get details of all source nodes
+
+```python
+import os
+import json
+
+from graphrag_toolkit.lexical_graph import LexicalGraphIndex
+from graphrag_toolkit.lexical_graph.storage import GraphStoreFactory
+from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory
+
+with (
+    GraphStoreFactory.for_graph_store(os.environ['GRAPH_STORE']) as graph_store,
+    VectorStoreFactory.for_vector_store(os.environ['VECTOR_STORE']) as vector_store
+):
+
+    graph_index = LexicalGraphIndex(
+        graph_store, 
+        vector_store,
+        tenant_id='tenant123' # optional - uses default tenant if not specified
+    )
+    
+    sources = graph_index.get_sources()
+    
+    print(json.dumps(sources, indent=2))
+```
+
+#### Get details of all current source nodes
+
+```python
+import os
+import json
+
+from graphrag_toolkit.lexical_graph import LexicalGraphIndex
+from graphrag_toolkit.lexical_graph.storage import GraphStoreFactory
+from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory
+from graphrag_toolkit.lexical_graph.versioning import VersioningConfig, VersioningMode
+
+with (
+    GraphStoreFactory.for_graph_store(os.environ['GRAPH_STORE']) as graph_store,
+    VectorStoreFactory.for_vector_store(os.environ['VECTOR_STORE']) as vector_store
+):
+
+    graph_index = LexicalGraphIndex(
+        graph_store, 
+        vector_store,
+        tenant_id='tenant123' # optional - uses default tenant if not specified
+    )
+    
+    versioning_config = VersioningConfig(versioning_mode=VersioningMode.CURRENT)
+    
+    sources = graph_index.get_sources(versioning_config=versioning_config)
+    
+    print(json.dumps(sources, indent=2))
+```
+
+#### Get details of all previous source nodes
+
+```python
+import os
+import json
+
+from graphrag_toolkit.lexical_graph import LexicalGraphIndex
+from graphrag_toolkit.lexical_graph.storage import GraphStoreFactory
+from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory
+from graphrag_toolkit.lexical_graph.versioning import VersioningConfig, VersioningMode
+
+with (
+    GraphStoreFactory.for_graph_store(os.environ['GRAPH_STORE']) as graph_store,
+    VectorStoreFactory.for_vector_store(os.environ['VECTOR_STORE']) as vector_store
+):
+
+    graph_index = LexicalGraphIndex(
+        graph_store, 
+        vector_store,
+        tenant_id='tenant123' # optional - uses default tenant if not specified
+    )
+    
+    versioning_config = VersioningConfig(versioning_mode=VersioningMode.PREVIOUS)
+    
+    sources = graph_index.get_sources(versioning_config=versioning_config)
+    
+    print(json.dumps(sources, indent=2))
+```
+
+#### Get details of previous versions of files with specific metadata
+
+```python
+import os
+import json
+
+from graphrag_toolkit.lexical_graph import LexicalGraphIndex
+from graphrag_toolkit.lexical_graph.storage import GraphStoreFactory
+from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory
+from graphrag_toolkit.lexical_graph.versioning import VersioningConfig, VersioningMode
+
+with (
+    GraphStoreFactory.for_graph_store(os.environ['GRAPH_STORE']) as graph_store,
+    VectorStoreFactory.for_vector_store(os.environ['VECTOR_STORE']) as vector_store
+):
+
+    graph_index = LexicalGraphIndex(
+        graph_store, 
+        vector_store,
+        tenant_id='tenant123' # optional - uses default tenant if not specified
+    )
+    
+    versioning_config = VersioningConfig(versioning_mode=VersioningMode.PREVIOUS)
+    
+    sources = graph_index.get_sources(
+        filter={
+            'file_name': 'readme.md',
+            'title': 'How to play'
+        },
+        versioning_config=versioning_config
+    )
+    
+    print(json.dumps(sources, indent=2))
+```
 
 ### Upgrading existing graph and vector stores
 
