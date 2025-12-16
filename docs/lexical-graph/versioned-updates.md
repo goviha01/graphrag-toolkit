@@ -294,7 +294,8 @@ The results are formatted like this:
     "versioning": {
       "build_timestamp": 1765880067513,
       "id_fields": [
-        "file_name"
+        "file_name",
+        "title"
       ],
       "valid_from": 1761899971000,
       "valid_to": 1761899972000,
@@ -316,7 +317,8 @@ The results are formatted like this:
     "versioning": {
       "build_timestamp": 1765880102994,
       "id_fields": [
-        "file_name"
+        "file_name",
+        "title"
       ],
       "valid_from": 1761899972000,
       "valid_to": 1761899973000,
@@ -338,7 +340,8 @@ The results are formatted like this:
     "versioning": {
       "build_timestamp": 1765880173432,
       "id_fields": [
-        "file_name"
+        "file_name",
+        "title"
       ],
       "valid_from": 1761899973000,
       "valid_to": 1761899974000,
@@ -360,7 +363,8 @@ The results are formatted like this:
     "versioning": {
       "build_timestamp": 1765880242134,
       "id_fields": [
-        "file_name"
+        "file_name",
+        "title"
       ],
       "valid_from": 1761899974000,
       "valid_to": 10000000000000,
