@@ -1060,10 +1060,10 @@ class OpenSearchIndex(VectorIndex):
 
         return [reverse_doc_id_map[doc_id] for doc_id in doc_ids]
 
-    def _try_bulk_update(self, body:str):
+    def _try_bulk_update(self, body:str, operation:Optional[str]='update'):
 
         def is_transient(item:Dict):
-            return item.get('update', {}).get('status', 0) in [429, 503]
+            return item.get(operation, {}).get('status', 0) in [429, 503]
 
         for attempt_num in range(1, 6):
 
@@ -1072,7 +1072,7 @@ class OpenSearchIndex(VectorIndex):
             if response['errors']:
                 is_retriable = all([is_transient(item) for item in response.get('items', [])])
                 if is_retriable:
-                    logger.warning(f'Transient error during bulk update, retrying after {attempt_num} seconds')
+                    logger.warning(f'Transient error during bulk {operation}, retrying after {attempt_num} seconds')
                     time.sleep(attempt_num)
             else:
                 return []
@@ -1080,7 +1080,45 @@ class OpenSearchIndex(VectorIndex):
         logger.error(f'Error during bulk update: {str(response)}')
 
         return [
-            item['update']['_id'] 
+            item[operation]['_id'] 
             for item in response['items']
             if item.get('error', None)
         ]
+    
+    def delete_embeddings(self, ids:List[str]=[]):
+
+
+        allow_refresh = True
+        doc_id_map = self._get_existing_doc_ids_for_ids(ids)
+
+        num_docs_to_delete = sum([len(v) for v in doc_id_map.values()])
+
+        logger.debug(f'Deleting embeddings [num_ids: {len(ids)}, num_docs_to_delete: {num_docs_to_delete}]')
+
+        start = time.time()
+
+        while (len(doc_id_map.keys()) < len(ids)) and allow_refresh:
+            logger.debug('Unable to find documents for all ids in index, waiting 10 seconds')
+            time.sleep(10)
+            doc_id_map = self._get_existing_doc_ids_for_ids(ids)
+            if int(time.time() - start) > 70:
+                allow_refresh = False
+
+        if len(doc_id_map.keys()) < len(ids):
+            logger.warning(f'Unable to find documents for all ids in index after 70 seconds: [ids: {ids}, indexed_ids: {doc_id_map.keys()}]')
+
+        requests = []
+        
+        for item in doc_id_map.values():
+            for doc_id in item:
+                requests.append(f'{{ "delete" : {{"_id" : "{doc_id}", "_index" : "{self.underlying_index_name()}" }} }}')
+                
+
+        if requests:
+            failed_doc_ids = self._try_bulk_update('\n'.join(requests), 'delete')
+            logger.debug(f'Deleted embeddings [succeeded: {num_docs_to_delete - len(failed_doc_ids)}, failed: {len(failed_doc_ids)}]')
+            return self._unmap_doc_ids(failed_doc_ids, doc_id_map)      
+        else:
+            logger.warning(f'Delete bulk update request is empty')
+            return []
+        

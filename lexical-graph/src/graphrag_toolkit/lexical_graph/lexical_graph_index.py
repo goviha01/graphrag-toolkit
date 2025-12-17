@@ -32,6 +32,7 @@ from graphrag_toolkit.lexical_graph.indexing.build import VersionManager
 from graphrag_toolkit.lexical_graph.indexing.build import Checkpoint
 from graphrag_toolkit.lexical_graph.indexing.build import BuildFilters
 from graphrag_toolkit.lexical_graph.indexing.build.null_builder import NullBuilder
+from graphrag_toolkit.lexical_graph.indexing.build.delete_sources import DeleteSources
 
 from llama_index.core.node_parser import SentenceSplitter, NodeParser
 from llama_index.core.schema import BaseNode
@@ -728,3 +729,53 @@ class LexicalGraphIndex():
             return source
 
         return [reformat(result['result']) for result in results]
+    
+    @overload
+    def delete_sources(self, 
+                    source_id:str=None, 
+                    versioning_config:VersioningConfig=None, 
+                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+        ...
+    
+    @overload
+    def delete_sources(self, 
+                    source_ids:List[str]=None, 
+                    versioning_config:VersioningConfig=None, 
+                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+        ...
+
+    @overload
+    def delete_sources(self, 
+                    filter:FilterConfig=None, 
+                    versioning_config:VersioningConfig=None, 
+                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+        ...
+
+    @overload
+    def delete_sources(self, 
+                    filter:Dict[str, Any]=None, 
+                    versioning_config:VersioningConfig=None, 
+                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+        ...
+
+    @overload
+    def delete_sources(self, 
+                    filter:List[Dict[str, Any]]=None, 
+                    versioning_config:VersioningConfig=None, 
+                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+        ...
+
+    def delete_sources(self,
+                    source_id:str=None,
+                    source_ids:List[str]=None,
+                    filter:Union[FilterConfig, Dict[str, Any], List[Dict[str, Any]]]=None,
+                    versioning_config:VersioningConfig=None,
+                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+        
+        sources = self.get_sources(source_id, source_ids, filter, versioning_config)
+        source_ids = [s['sourceId'] for s in sources]
+
+        delete_sources = DeleteSources(graph_store=self.graph_store, vector_store=self.vector_store)
+
+        delete_sources.delete_source_documents(source_ids)
+

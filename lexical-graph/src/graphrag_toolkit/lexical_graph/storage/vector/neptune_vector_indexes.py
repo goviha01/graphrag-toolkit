@@ -290,3 +290,6 @@ class NeptuneIndex(VectorIndex):
     
     def enable_for_versioning(self, ids:List[str]=[]):
         return []
+    
+    def delete_embeddings(self, ids:List[str]=[]):
+        return []
