@@ -729,8 +729,6 @@ class PGIndex(VectorIndex):
                 WHERE {self.index_name}Id IN ({format_ids(ids)});'''
             )
 
-            cur.fetchall()
-
         except UndefinedTable as e:
             logger.warning(f'Index {self.underlying_index_name()} does not exist')
 

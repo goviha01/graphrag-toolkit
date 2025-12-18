@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 MetadataFiltersType = Union[MetadataFilters, MetadataFilter, List[MetadataFilter]]
 
-def format_version_independent_id_fields(fields:List[str]) -> str:
+def format_metadata_list(fields:List[str]) -> str:
     return ';'.join(fields)
 
 def is_datetime_key(key):

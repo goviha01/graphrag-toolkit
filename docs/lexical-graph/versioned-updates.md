@@ -17,6 +17,7 @@
     - [Get details of all current source nodes](#get-details-of-all-current-source-nodes)
     - [Get details of all previous source nodes](#get-details-of-all-previous-source-nodes)
     - [Get details of previous versions of files with specific metadata](#get-details-of-previous-versions-of-files-with-specific-metadata)
+  - [Deleting documents](#deleting-documents)
   - [Upgrading existing graph and vector stores](#upgrading-existing-graph-and-vector-stores)
     - [Upgrading specific tenants](#upgrading-specific-tenants)
     - [Upgrading specific vector indexes](#upgrading-specific-vector-indexes)
@@ -466,6 +467,54 @@ with (
     )
     
     print(json.dumps(sources, indent=2))
+```
+
+### Deleting documents
+
+You can deleted individual document subgraphs using the `LexcialGraphIndex.delete_sources()` method.
+
+> **WARNING** Deleting documents is a destructive action: document subgraphs will be removed from the graph store and their embeddings from the vector store. Use the `LexcialGraphIndex.get_sources()` method to validate the sources that will be deleted before running `delete_sources()`.
+
+`delete_sources()` has the same signature as `get_sources()`. You can use `get_sources()` to review which document versions will be deleted before running `delete_sources()`.
+
+When a versioned document is deleted, its source node, together with all its chunk, topic and statement nodes, are deleted from the lexical graph. The delete process will also removed any orphaned facts and entities that are no longer connected to at least one document.
+
+#### Deleting a previous version of a document with specific metadata
+
+The following example assumes that each version of the `readme.md` file titled 'How to play', had a unique `version` metadata value (`version` is a domain-specific piece of metadata supplied by the application at indexing time, not a part of the internal versioning metadata used by the versioned update feature). Here, we delete version `v2` of the versioned document.
+
+```python
+import os
+import json
+
+from graphrag_toolkit.lexical_graph import LexicalGraphIndex
+from graphrag_toolkit.lexical_graph.storage import GraphStoreFactory
+from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory
+from graphrag_toolkit.lexical_graph.versioning import VersioningConfig, VersioningMode
+
+with (
+    GraphStoreFactory.for_graph_store(os.environ['GRAPH_STORE']) as graph_store,
+    VectorStoreFactory.for_vector_store(os.environ['VECTOR_STORE']) as vector_store
+):
+
+    graph_index = LexicalGraphIndex(
+        graph_store, 
+        vector_store,
+        tenant_id='tenant123' # optional - uses default tenant if not specified
+    )
+    
+    versioning_config = VersioningConfig(versioning_mode=VersioningMode.PREVIOUS)
+    
+    deleted = graph_index.delete_sources(
+        filter={
+            'file_name': 'readme.md',
+            'title': 'How to play',
+            'version': 'v2'
+        },
+        versioning_config=versioning_config
+    )
+    
+    print(json.dumps(deleted, indent=2))
 ```
 
 ### Upgrading existing graph and vector stores

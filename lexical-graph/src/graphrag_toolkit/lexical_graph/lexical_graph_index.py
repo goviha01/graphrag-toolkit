@@ -9,7 +9,7 @@ from graphrag_toolkit.lexical_graph import GraphRAGConfig
 from graphrag_toolkit.lexical_graph.tenant_id import TenantId, TenantIdType, DEFAULT_TENANT_ID, to_tenant_id
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig, SourceMetadataFormatter, DefaultSourceMetadataFormatter, MetadataFiltersType
 from graphrag_toolkit.lexical_graph.metadata import to_metadata_filter
-from graphrag_toolkit.lexical_graph.versioning import VersioningConfig, VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSIONING_METADATA_KEYS, VERSION_INDEPENDENT_ID_FIELDS, TIMESTAMP_UPPER_BOUND, TIMESTAMP_LOWER_BOUND
+from graphrag_toolkit.lexical_graph.versioning import VersioningConfig, VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSIONING_METADATA_KEYS, VERSION_INDEPENDENT_ID_FIELDS, TIMESTAMP_LOWER_BOUND, PREV_VERSIONS
 from graphrag_toolkit.lexical_graph.storage import GraphStoreFactory, GraphStoreType
 from graphrag_toolkit.lexical_graph.storage import VectorStoreFactory, VectorStoreType
 from graphrag_toolkit.lexical_graph.storage.graph import MultiTenantGraphStore
@@ -630,35 +630,35 @@ class LexicalGraphIndex():
     def get_sources(self, 
                     source_id:str=None, 
                     versioning_config:VersioningConfig=None, 
-                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+                    order_by:Union[str, List[str]]=None) -> List[Dict[str, Any]]:
         ...
     
     @overload
     def get_sources(self, 
                     source_ids:List[str]=None, 
                     versioning_config:VersioningConfig=None, 
-                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+                    order_by:Union[str, List[str]]=None) -> List[Dict[str, Any]]:
         ...
 
     @overload
     def get_sources(self, 
                     filter:FilterConfig=None, 
                     versioning_config:VersioningConfig=None, 
-                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+                    order_by:Union[str, List[str]]=None) -> List[Dict[str, Any]]:
         ...
 
     @overload
     def get_sources(self, 
                     filter:Dict[str, Any]=None, 
                     versioning_config:VersioningConfig=None, 
-                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+                    order_by:Union[str, List[str]]=None) -> List[Dict[str, Any]]:
         ...
 
     @overload
     def get_sources(self, 
                     filter:List[Dict[str, Any]]=None, 
                     versioning_config:VersioningConfig=None, 
-                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+                    order_by:Union[str, List[str]]=None) -> List[Dict[str, Any]]:
         ...
 
     def get_sources(self,
@@ -666,7 +666,7 @@ class LexicalGraphIndex():
                     source_ids:List[str]=None,
                     filter:Union[FilterConfig, Dict[str, Any], List[Dict[str, Any]]]=None,
                     versioning_config:VersioningConfig=None,
-                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+                    order_by:Union[str, List[str]]=None) -> List[Dict[str, Any]]:
 
         source_where_clause = None
         metadata_where_clause = None
@@ -713,7 +713,8 @@ class LexicalGraphIndex():
                 valid_to: coalesce(source.{VALID_TO}, {TIMESTAMP_LOWER_BOUND}),
                 extract_timestamp: coalesce(source.{EXTRACT_TIMESTAMP}, {TIMESTAMP_LOWER_BOUND}),
                 build_timestamp: coalesce(source.{BUILD_TIMESTAMP}, {TIMESTAMP_LOWER_BOUND}),
-                id_fields: split(coalesce(source.{VERSION_INDEPENDENT_ID_FIELDS}, ""), ";")
+                id_fields: split(coalesce(source.{VERSION_INDEPENDENT_ID_FIELDS}, ""), ";"),
+                prev_versions: split(coalesce(source.{PREV_VERSIONS}, ""), ";")
             }}  
         }} AS result {order_by_clause}
         '''
@@ -734,35 +735,35 @@ class LexicalGraphIndex():
     def delete_sources(self, 
                     source_id:str=None, 
                     versioning_config:VersioningConfig=None, 
-                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+                    order_by:Union[str, List[str]]=None) -> List[Dict[str, Any]]:
         ...
     
     @overload
     def delete_sources(self, 
                     source_ids:List[str]=None, 
                     versioning_config:VersioningConfig=None, 
-                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+                    order_by:Union[str, List[str]]=None) -> List[Dict[str, Any]]:
         ...
 
     @overload
     def delete_sources(self, 
                     filter:FilterConfig=None, 
                     versioning_config:VersioningConfig=None, 
-                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+                    order_by:Union[str, List[str]]=None) -> List[Dict[str, Any]]:
         ...
 
     @overload
     def delete_sources(self, 
                     filter:Dict[str, Any]=None, 
                     versioning_config:VersioningConfig=None, 
-                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+                    order_by:Union[str, List[str]]=None) -> List[Dict[str, Any]]:
         ...
 
     @overload
     def delete_sources(self, 
                     filter:List[Dict[str, Any]]=None, 
                     versioning_config:VersioningConfig=None, 
-                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+                    order_by:Union[str, List[str]]=None) -> List[Dict[str, Any]]:
         ...
 
     def delete_sources(self,
@@ -770,12 +771,12 @@ class LexicalGraphIndex():
                     source_ids:List[str]=None,
                     filter:Union[FilterConfig, Dict[str, Any], List[Dict[str, Any]]]=None,
                     versioning_config:VersioningConfig=None,
-                    order_by:Union[str, List[str]]=None) -> Dict[str, Any]:
+                    order_by:Union[str, List[str]]=None) -> List[Dict[str, Any]]:
         
         sources = self.get_sources(source_id, source_ids, filter, versioning_config)
         source_ids = [s['sourceId'] for s in sources]
 
         delete_sources = DeleteSources(graph_store=self.graph_store, vector_store=self.vector_store)
 
-        delete_sources.delete_source_documents(source_ids)
+        return delete_sources.delete_source_documents(source_ids)
 

@@ -1,16 +1,38 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import List
+from typing import List, Dict, Any, Callable, Generator
 import concurrent.futures
 import logging
+import json
 
 from graphrag_toolkit.lexical_graph.storage.graph import GraphStore
 from graphrag_toolkit.lexical_graph.storage.vector import VectorStore
+from graphrag_toolkit.lexical_graph.indexing import NodeHandler
 
-from llama_index.core.schema import BaseComponent
+from llama_index.core.schema import BaseComponent, BaseNode
 
 logger = logging.getLogger(__name__)
+
+class DeletePrevVersions(NodeHandler):
+
+    lexical_graph:Any
+    filter_fn:Callable[[Dict[str, Any]], bool]=lambda d: True
+
+    def accept(self, nodes, **kwargs):
+        for node in nodes:
+            j = json.loads(node.to_json())
+            metadata = j['metadata']
+            if 'aws::graph::index' in metadata:
+                node_type = metadata['aws::graph::index']['index']
+                source_metadata = metadata.get('source', {}).get('metadata', {})
+                if node_type == 'source' and self.filter_fn(source_metadata):
+                    prev_versions = metadata.get('source', {}).get('versioning', {}).get('prev_versions', [])
+                    if prev_versions:
+                        logger.debug(f'Deleting previous versions for source [metadata: {json.dumps(source_metadata)}, prev_versions: {prev_versions}]')
+                        self.lexical_graph.delete_sources(source_ids=prev_versions)
+                
+            yield node
 
 class DeleteSources(BaseComponent):
 
@@ -282,7 +304,7 @@ class DeleteSources(BaseComponent):
 
         self.graph_store.execute_query_with_retry(cypher, parameters)
 
-    def delete_source_document(self, source_id:str):
+    def delete_source_document(self, source_id:str) -> Dict[str, Any]:
 
         chunk_count = 0
         topic_count = 0
@@ -329,16 +351,24 @@ class DeleteSources(BaseComponent):
 
         logger.debug(f'Deleted source [source_id: {source_id}, chunks: {chunk_count}, topics: {topic_count}, statements: {statement_count}, facts: {fact_count}, entities: {entity_count}]')
 
-        return source_id
+        return {
+            'sourceId': source_id,
+            'chunks': chunk_count,
+            'topics': topic_count,
+            'statements': statement_count,
+            'facts': fact_count,
+            'entities': entity_count
+        }
+    
 
-    def delete_source_documents(self, source_ids:List[str]):
+    def delete_source_documents(self, source_ids:List[str]) -> List[Dict[str, Any]]:
 
         source_id_batches = [
             source_ids[x:x+self.num_workers] 
             for x in range(0, len(source_ids), self.num_workers)
         ]
 
-        deleted_source_ids = []
+        deleted_sources = []
 
         for source_id_batch in source_id_batches:
 
@@ -352,10 +382,9 @@ class DeleteSources(BaseComponent):
                 executor.shutdown()
 
                 for future in futures:
-                    for result in future.result():
-                        deleted_source_ids.append(result)
+                    deleted_sources.append(future.result())
 
-        return deleted_source_ids
+        return deleted_sources
 
 
     

@@ -1,19 +1,25 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Dict, Any, Union, List, Optional
+import json
+import logging
+from typing import Dict, Any, Union, List, Optional, Callable, Generator
 from enum import Enum
 
 from graphrag_toolkit.lexical_graph.metadata import FilterConfig
+from llama_index.core.schema import BaseNode
 from llama_index.core.vector_stores.types import FilterCondition, FilterOperator, MetadataFilter, MetadataFilters
+
+logger = logging.getLogger(__name__)
 
 VALID_FROM = '__aws__versioning__valid_from__'
 VALID_TO = '__aws__versioning__valid_to__'
 EXTRACT_TIMESTAMP = '__aws__versioning__extract_timestamp__'
 BUILD_TIMESTAMP = '__aws__versioning__build_timestamp__'
 VERSION_INDEPENDENT_ID_FIELDS = '__aws__versioning__id_fields__'
+PREV_VERSIONS = '__aws__versioning__prev_versions__'
 
-VERSIONING_METADATA_KEYS = [VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSION_INDEPENDENT_ID_FIELDS]
+VERSIONING_METADATA_KEYS = [VALID_FROM, VALID_TO, EXTRACT_TIMESTAMP, BUILD_TIMESTAMP, VERSION_INDEPENDENT_ID_FIELDS, PREV_VERSIONS]
 
 TIMESTAMP_LOWER_BOUND = -1
 TIMESTAMP_UPPER_BOUND = 10000000000000
@@ -44,6 +50,27 @@ def to_versioning_config(enable_versioning:bool):
         return VersioningConfig(versioning_mode=VersioningMode.CURRENT)
     else:
         return VersioningConfig(versioning_mode=VersioningMode.NO_VERSIONING)
+    
+class DeletePrevVersions():
+
+    def __init__(self, lexical_graph:Any,  filter_fn:Callable[[Dict[str, Any]], bool]=None):
+        self.lexical_graph = lexical_graph
+        self.filter_fn = filter_fn or (lambda d: True)
+
+    def __call__(self, nodes: List[BaseNode], **kwargs: Any) -> Generator[BaseNode, None, None]:
+        for node in nodes:
+            j = json.loads(node.to_json())
+            metadata = j['metadata']
+            if 'aws::graph::index' in metadata:
+                node_type = metadata['aws::graph::index']['index']
+                source_metadata = metadata.get('source', {}).get('metadata', {})
+                if node_type == 'source' and self.filter_fn(source_metadata):
+                    prev_versions = (source_metadata.get('prev_versions', []))
+                    if prev_versions:
+                        logger.debug(f'Deleting previous versions for source with metadata {json.dumps(source_metadata)} [prev_versions: {prev_versions}]')
+                        self.lexical_graph.delete_sources(source_ids=prev_versions)
+                
+            yield node
 
 class VersioningConfig():
     def __init__(self, versioning_mode:Optional[VersioningMode]=None, at_timestamp:Optional[int]=None):
