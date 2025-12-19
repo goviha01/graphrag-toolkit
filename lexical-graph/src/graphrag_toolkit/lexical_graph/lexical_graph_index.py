@@ -681,7 +681,7 @@ class LexicalGraphIndex():
 
         source_ids = source_id or source_ids
         
-        if source_ids:
+        if source_ids is not None:
             source_ids = [source_ids] if isinstance(source_ids, str) else source_ids
             source_where_clause = f'({self.graph_store.node_id("source.sourceId")} in $sourceIds)'
             parameters['sourceIds'] = source_ids

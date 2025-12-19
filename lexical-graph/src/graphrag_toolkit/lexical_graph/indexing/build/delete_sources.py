@@ -20,17 +20,24 @@ class DeletePrevVersions(NodeHandler):
     filter_fn:Callable[[Dict[str, Any]], bool]=lambda d: True
 
     def accept(self, nodes, **kwargs):
+
         for node in nodes:
+
             j = json.loads(node.to_json())
             metadata = j['metadata']
+
             if 'aws::graph::index' in metadata:
                 node_type = metadata['aws::graph::index']['index']
-                source_metadata = metadata.get('source', {}).get('metadata', {})
-                if node_type == 'source' and self.filter_fn(source_metadata):
-                    prev_versions = metadata.get('source', {}).get('versioning', {}).get('prev_versions', [])
-                    if prev_versions:
-                        logger.debug(f'Deleting previous versions for source [metadata: {json.dumps(source_metadata)}, prev_versions: {prev_versions}]')
-                        self.lexical_graph.delete_sources(source_ids=prev_versions)
+
+                if node_type == 'source':
+                    prev_version_ids = metadata.get('source', {}).get('versioning', {}).get('prev_versions', [])
+                    prev_versions = self.lexical_graph.get_sources(source_ids=prev_version_ids)
+                    deletable_prev_versions = [prev_version for prev_version in prev_versions if self.filter_fn(prev_version['metadata'])]
+                    
+                    if deletable_prev_versions:
+                        logger.debug(f'Deleting previous versions for source [source_id: {node.id_}, prev_versions: {json.dumps(deletable_prev_versions)}]')
+                        deletable_prev_version_ids = [d['sourceId'] for d in deletable_prev_versions]
+                        self.lexical_graph.delete_sources(source_ids=deletable_prev_version_ids)
                 
             yield node
 
