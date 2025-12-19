@@ -21,8 +21,8 @@
     - [Deleting documents by source id](#deleting-documents-by-source-id)
     - [Deleting all previous versions of a document](#deleting-all-previous-versions-of-a-document)
     - [Deleting a document with version-specific metadata](#deleting-a-document-with-version-specific-metadata)
-    - [Automatically delete versioned documents](#automatically-delete-versioned-documents)
-    - [Implementinhg deletion protection](#implementinhg-deletion-protection)
+  - [Automatically delete versioned documents](#automatically-delete-versioned-documents)
+    - [Implementing deletion protection](#implementing-deletion-protection)
   - [Upgrading existing graph and vector stores](#upgrading-existing-graph-and-vector-stores)
     - [Upgrading specific tenants](#upgrading-specific-tenants)
     - [Upgrading specific vector indexes](#upgrading-specific-vector-indexes)
@@ -517,7 +517,7 @@ with (
 
 #### Deleting all previous versions of a document
 
-The following example uses version-indepenent metadata fields (in this case `file_name` and `title`) to identify all versions (current and all previous) of a specific document, and then versioning config with `versioning_mode=VersioningMode.PREVIOUS` to further narrow the selection to all those versions of the document that are no longer current. These previous versions of the document are then deleted.
+The following example uses version-independent metadata fields (in this case `file_name` and `title`) to identify all versions (current and previous) of a specific document, and then versioning config with `versioning_mode=VersioningMode.PREVIOUS` to further narrow the selection to all those versions of the document that are no longer current. These previous versions of the document are then deleted:
 
 ```python
 import os
@@ -586,7 +586,7 @@ with (
     print(json.dumps(deleted, indent=2))
 ```
 
-#### Automatically delete versioned documents
+### Automatically delete versioned documents
 
 You can configure the build process to automatically delete versioned documents using the `DeletePrevVersions` node handler:
 
@@ -625,9 +625,9 @@ with(
 
 > **Warning** Use `DeletePrevVersions` with care. If your version-independent metadata fields are too permissive, you may end up versioning and deleting the wrong documents.
 
-#### Implementinhg deletion protection
+#### Implementing deletion protection
 
-`DeletePrevVersions` accepts a custom filter function. This function will be invoked with the metadata of each versioned document that is a candidate for deletion. If the function returns `True`, the document will be deleted; if it returns `False`, the document will not be deleted. You can use this custom filter funtion and a custom metadata field to implement deletion protection. The following example adds a `deletionProtection` metadata field to each document to be indexed; the custom filter function then checks the value of this field:
+`DeletePrevVersions` accepts a custom filter function. This function will be invoked with the metadata of each versioned document that is a candidate for deletion. If the function returns `True`, the document will be deleted; if it returns `False`, the document will not be deleted. You can use this custom filter function and a custom metadata field to implement deletion protection. The following example adds a `deletionProtection` metadata field to each document to be indexed; the custom filter function then checks the value of this field:
 
 ```python
 import os
