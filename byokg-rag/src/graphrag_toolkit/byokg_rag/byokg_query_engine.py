@@ -1,10 +1,6 @@
 from typing import List, Tuple, Optional, Set
-import os
-import sys
-# Add the parent directory to the Python path
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(parent_dir)
-from utils import load_yaml, parse_response
+
+from .utils import load_yaml, parse_response
 
 
 class ByoKGQueryEngine:
@@ -40,15 +36,15 @@ class ByoKGQueryEngine:
         self.schema = graph_store.get_schema()
 
         if llm_generator is None:
-            from llm import BedrockGenerator
+            from .llm.bedrock_llms import BedrockGenerator
             llm_generator= BedrockGenerator(
                 model_name='us.anthropic.claude-3-5-sonnet-20240620-v1:0',
                 region_name='us-west-2')
         self.llm_generator = llm_generator
             
         if entity_linker is None:
-            from indexing import FuzzyStringIndex
-            from graph_retrievers import EntityLinker
+            from .indexing import FuzzyStringIndex
+            from .graph_retrievers import EntityLinker
             string_index = FuzzyStringIndex()
             string_index.add(self.graph_store.nodes())
             entity_retriever = string_index.as_entity_matcher()
@@ -57,8 +53,8 @@ class ByoKGQueryEngine:
         self.direct_query_linking = direct_query_linking
         
         if triplet_retriever is None:
-            from graph_retrievers import AgenticRetriever
-            from graph_retrievers import GTraversal, TripletGVerbalizer
+            from .graph_retrievers import AgenticRetriever
+            from .graph_retrievers import GTraversal, TripletGVerbalizer
             graph_traversal = GTraversal(self.graph_store)
             graph_verbalizer = TripletGVerbalizer()
             triplet_retriever = AgenticRetriever(
@@ -68,8 +64,8 @@ class ByoKGQueryEngine:
         self.triplet_retriever = triplet_retriever
         
         if path_retriever is None:
-            from graph_retrievers import PathRetriever
-            from graph_retrievers import GTraversal, PathVerbalizer
+            from .graph_retrievers import PathRetriever
+            from .graph_retrievers import GTraversal, PathVerbalizer
             graph_traversal = GTraversal(self.graph_store)
             path_verbalizer = PathVerbalizer()
             path_retriever = PathRetriever(
@@ -78,12 +74,12 @@ class ByoKGQueryEngine:
         self.path_retriever = path_retriever
 
         if graph_query_executor is None and hasattr(graph_store, 'execute_query'):
-            from graph_retrievers import GraphQueryRetriever
+            from .graph_retrievers import GraphQueryRetriever
             graph_query_executor = GraphQueryRetriever(self.graph_store)
         self.graph_query_executor = graph_query_executor
 
         if kg_linker is None and cypher_kg_linker is None: #initialize KGLinker as default
-            from graph_connectors import KGLinker
+            from .graph_connectors import KGLinker
             kg_linker = KGLinker(
                 llm_generator=self.llm_generator,
                 graph_store=self.graph_store
