@@ -1,11 +1,8 @@
 from abc import ABC
-import os
-import sys
 import re
 import logging
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(parent_dir)
-from utils import load_yaml, parse_response
+
+from ..utils import load_yaml, parse_response
 
 
 class GRetriever(ABC):
