@@ -159,6 +159,24 @@ class CypherKGLinker(KGLinker):
             "draft-answer-generation": {"pattern": r"<answers>(.*?)</answers>"},
         }
 
+    def _finalize_prompt_iterative_prompt(self):
+        """
+        Combine task prompts into a single string, using iterative versions where appropriate.
+        For CypherKGLinker, use opencypher-linking-iterative when opencypher-linking task is present.
+        
+        Returns:
+            str: Combined task prompts with iterative versions
+        """
+        task_prompts = ""
+        for task in self.tasks:
+            if task == "opencypher-linking":
+                task_prompt = load_yaml(self.task_prompt_file)["opencypher-linking-iterative"]
+            else:
+                task_prompt = load_yaml(self.task_prompt_file)[task]
+            task_prompts += f"\n\n{task_prompt}\n\n"
+
+        return task_prompts
+
     def is_cypher_linker(self): #function to test if is instance of CypherKGLinker
         return True
 
