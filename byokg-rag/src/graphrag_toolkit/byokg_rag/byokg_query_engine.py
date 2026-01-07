@@ -93,6 +93,10 @@ class ByoKGQueryEngine:
         if cypher_kg_linker is not None:
             assert hasattr(cypher_kg_linker, "is_cypher_linker"), "cypher_kg_linker must be an instance of CypherKGLinker"
         self.cypher_kg_linker = cypher_kg_linker
+        
+        if self.cypher_kg_linker is not None:
+            self.cypher_kg_linker_prompts = self.cypher_kg_linker.task_prompts
+            self.cypher_kg_linker_prompts_iterative = self.cypher_kg_linker.task_prompts_iterative
 
     def _add_to_context(self, context_list: List[str], new_items: List[str]) -> None:
         """
@@ -139,22 +143,30 @@ class ByoKGQueryEngine:
             assert self.graph_query_executor is not None, "graph_query_executor must be initialized"
             
             for iteration in range(cypher_iterations):
-                # Generate response for current iteration
+                # Generate response for current iteration using iterative prompts after first iteration
+                if iteration == 0:
+                    task_prompts = self.cypher_kg_linker.task_prompts
+                else:
+                    task_prompts = self.cypher_kg_linker.task_prompts_iterative
 
                 response = self.cypher_kg_linker.generate_response(
                     question=query,
                     schema=self.schema,
                     graph_context="\n".join(cypher_context_with_feedback) if cypher_context_with_feedback else "",
-                    task_prompts = self.cypher_kg_linker.task_prompts,
+                    task_prompts = task_prompts,
                     user_input=user_input
                 )
                 artifacts = self.cypher_kg_linker.parse_response(response)
+
+                # Check for task completion when using iterative prompts - do this early to avoid unnecessary query execution
+                task_completion = parse_response(response, r"<task-completion>(.*?)</task-completion>")
+                if "FINISH" in " ".join(task_completion):
+                    break
 
                 if "opencypher-linking" in artifacts:
                     linking_query = " ".join(artifacts["opencypher-linking"])
                     context, linked_entities_cypher = self.graph_query_executor.retrieve(linking_query, return_answers=True)
                     cypher_context_with_feedback += context
-                    context, linked_entities_cypher = self.graph_query_executor.retrieve(linking_query, return_answers=True)
                     if len(linked_entities_cypher) == 0:
                         cypher_context_with_feedback.append("No executable results for the above cypher query for entity linking. Please improve cypher generation in the future for linking.")
                     
@@ -164,7 +176,7 @@ class ByoKGQueryEngine:
                     context, answers = self.graph_query_executor.retrieve(graph_query, return_answers=True)
                     cypher_context_with_feedback += context
                     if len(answers) == 0:
-                        cypher_context_with_feedback.append("No executable resuls for the above. Please improve cypher generation in the future by focusing more on the given schema and the relations between node types.")
+                        cypher_context_with_feedback.append("No executable results for the above. Please improve cypher generation in the future by focusing more on the given schema and the relations between node types.")
             
             if self.kg_linker is None:
                 return cypher_context_with_feedback
