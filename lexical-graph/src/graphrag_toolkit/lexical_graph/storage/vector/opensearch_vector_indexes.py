@@ -953,7 +953,7 @@ class OpenSearchIndex(VectorIndex):
         if requests:
             self._try_bulk_update(requests, 'delete')
         else:
-            logger.warning(f'[{self.underlying_index_name()}] Delete bulk update request is empty')
+            logger.debug(f'[{self.underlying_index_name()}] Delete bulk update request is empty')
 
         return node_ids_to_embed_map
     
@@ -997,7 +997,7 @@ class OpenSearchIndex(VectorIndex):
             failed_doc_ids = self._try_bulk_update(requests)
             return self._unmap_doc_ids(failed_doc_ids, doc_id_map)        
         else:
-            logger.warning(f'[{self.underlying_index_name()}] Versioning bulk update request is empty')
+            logger.debug(f'[{self.underlying_index_name()}] Versioning bulk update request is empty')
             return []
 
     
@@ -1071,7 +1071,7 @@ class OpenSearchIndex(VectorIndex):
             failed_doc_ids = self._try_bulk_update(requests)
             return self._unmap_doc_ids(failed_doc_ids, doc_id_map)      
         else:
-            logger.warning(f'[{self.underlying_index_name()}] Versioning bulk update request is empty')
+            logger.debug(f'[{self.underlying_index_name()}] Versioning bulk update request is empty')
             return []
         
     def _unmap_doc_ids(self, doc_ids:List[str], doc_id_map:Dict[str, List[str]]) -> List[str]:
@@ -1168,6 +1168,6 @@ class OpenSearchIndex(VectorIndex):
             failed_doc_ids = self._try_bulk_update(requests, 'delete')
             return self._unmap_doc_ids(failed_doc_ids, doc_id_map)      
         else:
-            logger.warning(f'[{self.underlying_index_name()}] Delete bulk update request is empty')
+            logger.debug(f'[{self.underlying_index_name()}] Delete bulk update request is empty')
             return []
         
