@@ -63,11 +63,17 @@ class ChunkGraphBuilder(GraphBuilder):
                 f'MERGE (chunk:`__Chunk__`{{{graph_client.node_id("chunkId")}: params.chunk_id}})',
                 'ON CREATE SET chunk.value = params.text ON MATCH SET chunk.value = params.text'
             ]
-
+            
             properties_c = {
                 'chunk_id': chunk_id,
                 'text': node.text
             }
+            
+            # Add external properties if present
+            for key, value in chunk_metadata.items():
+                if key != 'chunkId':  # Skip the ID field
+                    statements_c.append(f'SET chunk.{key} = params.{key}')
+                    properties_c[key] = value
 
             query_c = '\n'.join(statements_c)
 

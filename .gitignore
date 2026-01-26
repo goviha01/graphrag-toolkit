@@ -5,3 +5,28 @@
 /docs/lexical-graph/.idea/
 /examples/lexical-graph-hybrid-dev/notebooks/output/
 /examples/lexical-graph-hybrid-dev/notebooks/extracted/
+
+# Python cache and build files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

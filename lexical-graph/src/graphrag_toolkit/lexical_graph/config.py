@@ -49,6 +49,7 @@ DEFAULT_ENABLE_CACHE = False
 DEFAULT_METADATA_DATETIME_SUFFIXES = ['_date', '_datetime']
 DEFAULT_OPENSEARCH_ENGINE = 'nmslib'
 DEFAULT_ENABLE_VERSIONING = False
+DEFAULT_CHUNK_EXTERNAL_PROPERTIES = None
 
 def _is_json_string(s):
     """
@@ -287,6 +288,7 @@ class _GraphRAGConfig:
     _metadata_datetime_suffixes: Optional[List[str]] = None
     _opensearch_engine: Optional[str] = None
     _enable_versioning = None
+    _chunk_external_properties: Optional[Dict[str, str]] = None
 
     @contextlib.contextmanager
     def _validate_sso_token(self, profile):
@@ -1166,6 +1168,55 @@ class _GraphRAGConfig:
     @enable_versioning.setter
     def enable_versioning(self, enable_versioning: bool) -> None:
         self._enable_versioning = enable_versioning
+
+    @property
+    def chunk_external_properties(self) -> Optional[Dict[str, str]]:
+        """
+        Gets the mapping of external property names to source metadata keys.
+        
+        This property allows you to configure which metadata fields from source documents
+        should be extracted and added as properties on chunk nodes in the graph database.
+        This enables querying and filtering chunks by business-specific identifiers.
+        
+        The mapping is a dictionary where:
+        - Key: The property name to use on the chunk node (e.g., 'article_code', 'document_id')
+        - Value: The metadata key to extract from source document (e.g., 'article_id', 'doc_ref')
+        
+        Example:
+            {
+                'article_code': 'article_id',      # chunk.article_code from metadata['article_id']
+                'document_type': 'doc_type',       # chunk.document_type from metadata['doc_type']
+                'department': 'dept_code'          # chunk.department from metadata['dept_code']
+            }
+        
+        Returns:
+            Optional[Dict[str, str]]: Dictionary mapping chunk property names to metadata keys,
+                or None if not configured.
+        """
+        if self._chunk_external_properties is None:
+            env_value = os.environ.get('CHUNK_EXTERNAL_PROPERTIES', DEFAULT_CHUNK_EXTERNAL_PROPERTIES)
+            if env_value and _is_json_string(env_value):
+                self._chunk_external_properties = json.loads(env_value)
+            else:
+                self._chunk_external_properties = env_value
+        return self._chunk_external_properties
+
+    @chunk_external_properties.setter
+    def chunk_external_properties(self, chunk_external_properties: Optional[Dict[str, str]]) -> None:
+        """
+        Sets the mapping of external property names to source metadata keys.
+        
+        Args:
+            chunk_external_properties: Dictionary mapping chunk property names to metadata keys,
+                or None to disable the feature.
+                
+        Example:
+            GraphRAGConfig.chunk_external_properties = {
+                'article_code': 'article_id',
+                'document_type': 'doc_type'
+            }
+        """
+        self._chunk_external_properties = chunk_external_properties
 
 
 GraphRAGConfig = _GraphRAGConfig()
