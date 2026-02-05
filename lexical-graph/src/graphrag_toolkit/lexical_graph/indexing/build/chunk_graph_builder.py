@@ -60,20 +60,26 @@ class ChunkGraphBuilder(GraphBuilder):
             statements_c = [
                 '// insert chunks',
                 'UNWIND $params AS params',
-                f'MERGE (chunk:`__Chunk__`{{{graph_client.node_id("chunkId")}: params.chunk_id}})',
-                'ON CREATE SET chunk.value = params.text ON MATCH SET chunk.value = params.text'
+                f'MERGE (chunk:`__Chunk__`{{{graph_client.node_id("chunkId")}: params.chunk_id}})'
+            ]
+
+            chunk_property_setters = [
+                'chunk.value = params.text'
             ]
             
             properties_c = {
                 'chunk_id': chunk_id,
                 'text': node.text
             }
-            
+
             # Add external properties if present
             for key, value in chunk_metadata.items():
                 if key != 'chunkId':  # Skip the ID field
-                    statements_c.append(f'SET chunk.{key} = params.{key}')
+                    chunk_property_setters.append(f'chunk.{key} = params.{key}')
                     properties_c[key] = value
+
+            setter_statement = f"ON CREATE SET {', '.join(chunk_property_setters)} ON MATCH SET {', '.join(chunk_property_setters)}" 
+            statements_c.append(setter_statement)
 
             query_c = '\n'.join(statements_c)
 

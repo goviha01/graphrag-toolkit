@@ -19,6 +19,8 @@ from typing import Optional, Union, Dict, Set, List
 from boto3 import Session as Boto3Session
 from botocore.config import Config
 
+from graphrag_toolkit.lexical_graph.errors import ConfigurationError
+
 from llama_index.llms.bedrock_converse import BedrockConverse
 from llama_index.embeddings.bedrock import BedrockEmbedding
 from llama_index.core.settings import Settings
@@ -1216,6 +1218,11 @@ class _GraphRAGConfig:
                 'document_type': 'doc_type'
             }
         """
+        if chunk_external_properties and isinstance(chunk_external_properties, dict):
+            if 'text' in chunk_external_properties:
+                raise ConfigurationError("chunk_external_properties cannot contain a 'text' key")
+            if 'chunkId' in chunk_external_properties:
+                raise ConfigurationError("chunk_external_properties cannot contain a 'chunkId' key")
         self._chunk_external_properties = chunk_external_properties
 
 
